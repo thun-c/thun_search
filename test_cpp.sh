@@ -1,0 +1,1 @@
+rm -f build/test;g++ -o build/test src/test.cpp -std=c++17 -O3;./build/test
