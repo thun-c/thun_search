@@ -1,9 +1,11 @@
+#define DUMP(x) std::cerr << #x << ":\t" << x << std::endl;
 #include <string>
 #include <sstream>
 #include <random>
 #include <iostream>
 #include <queue>
-
+#include <memory>
+#include <algorithm>
 // 座標を保持する
 struct Coord
 {
@@ -24,8 +26,9 @@ class State
 {
 private:
 public:
+    std::shared_ptr<State> parent_ = nullptr;
     double evaluated_score_ = 0; // 探索上で評価したスコア
-    int first_action_ = -1;      // 探索木のルートノードで最初に選択した行動
+    int last_action = -1;        // 探索木のルートノードで最初に選択した行動
     virtual ~State() {}
 
     // ゲームの終了判定
@@ -44,12 +47,26 @@ public:
 
     // 現在の状況でプレイヤーが可能な行動を全て取得する
     virtual std::vector<int> legalActions() = 0;
+
+    virtual State *clone() = 0;
 };
 
 // 探索時のソート用に評価を比較する
 bool operator<(const State &state_1, const State &state_2)
 {
     return state_1.evaluated_score_ < state_2.evaluated_score_;
+}
+bool operator<(const std::shared_ptr<State> &state_1, const std::shared_ptr<State> &state_2)
+{
+    return state_1->evaluated_score_ < state_2->evaluated_score_;
+}
+
+std::shared_ptr<State> cloneAdvanced(std::shared_ptr<State> state, int action)
+{
+    auto clone = std::shared_ptr<State>(state->clone());
+    clone->advance(action);
+    clone->parent_ = state;
+    return clone;
 }
 
 class MazeState : public State
@@ -106,6 +123,7 @@ public:
             point = 0;
         }
         this->turn_++;
+        this->last_action = action;
     }
 
     // [どのゲームでも実装する] : 現在の状況でプレイヤーが可能な行動を全て取得する
@@ -152,31 +170,112 @@ public:
 
         return ss.str();
     }
+
+    State *clone() override
+    {
+        MazeState *cloned_state = new MazeState();
+        *cloned_state = *this;
+        return cloned_state;
+    }
 };
 
 // ランダムに行動を決定する
-int randomAction(State *state)
+std::vector<int> randomAction(std::shared_ptr<State> state)
 {
-    auto legal_actions = state->legalActions();
-    return legal_actions[mt_for_action() % (legal_actions.size())];
-}
-
-// シードを指定してゲーム状況を表示しながらAIにプレイさせる。
-void playGame(const int seed)
-{
-    using std::cout;
-    using std::endl;
-
-    auto state = MazeState(seed);
-    cout << state.toString() << endl;
-    while (!state.isDone())
+    while (!state->isDone())
     {
-        state.advance(randomAction(&state));
-        cout << state.toString() << endl;
+        auto legal_actions = state->legalActions();
+        int action = legal_actions[mt_for_action() % (legal_actions.size())];
+        DUMP(action);
+        state = cloneAdvanced(state, action);
     }
+    std::vector<int> actions{};
+    while (state->parent_ != nullptr)
+    {
+        actions.emplace_back(state->last_action);
+        state = state->parent_;
+    }
+    std::reverse(actions.begin(), actions.end());
+    return actions;
 }
+
+// // ビーム幅と深さを指定してビームサーチで行動を決定する
+// int beamSearchAction(State *state, const int beam_width, const int beam_depth)
+// {
+//     std::priority_queue<State> now_beam;
+//     State *best_state;
+
+//     now_beam.emplace(*state);
+//     for (int t = 0; t < beam_depth; t++)
+//     {
+//         std::priority_queue<State> next_beam;
+//         for (int i = 0; i < beam_width; i++)
+//         {
+//             if (now_beam.empty())
+//                 break;
+//             State now_state = now_beam.top();
+//             now_beam.pop();
+//             auto legal_actions = now_state.legalActions();
+//             for (const auto &action : legal_actions)
+//             {
+//                 State next_state = now_state;
+//                 next_state.advance(action);
+//                 next_state.evaluateScore();
+//                 if (t == 0)
+//                     next_state.first_action_ = action;
+//                 next_beam.push(next_state);
+//             }
+//         }
+
+//         now_beam = next_beam;
+//         best_state = now_beam.top();
+
+//         if (best_state.isDone())
+//         {
+//             break;
+//         }
+//     }
+//     return best_state.first_action_;
+// }
+
+// // シードを指定してゲーム状況を表示しながらAIにプレイさせる。
+// void playGame(const int seed)
+// {
+//     using std::cout;
+//     using std::endl;
+
+//     auto state = MazeState(seed);
+//     cout << state.toString() << endl;
+//     while (!state.isDone())
+//     {
+//         state.advance(randomAction(&state));
+//         cout << state.toString() << endl;
+//     }
+// }
 int main()
 {
-    playGame(0);
+    using namespace std;
+    // playGame(0);
+    // auto a = std::shared_ptr<State>(new MazeState(0));
+    // a->evaluated_score_ = 100;
+    // DUMP(a->evaluated_score_);
+    // auto b = std::shared_ptr<State>(a->clone());
+    // b->parent_ = a;
+    // b->evaluated_score_ = 200;
+    // DUMP(a->evaluated_score_);
+    // DUMP(b->evaluated_score_);
+    // auto p = b;
+    // while (p->parent_ != nullptr)
+    // {
+    //     DUMP(p->last_action);
+    //     p = p->parent_;
+    // }
+    auto a = std::shared_ptr<State>(new MazeState(0));
+    auto actions = randomAction(a);
+    cerr << "end-------" << endl;
+    for (auto action : actions)
+    {
+        DUMP(action)
+    }
     return 0;
 }
