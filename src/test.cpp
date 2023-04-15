@@ -28,7 +28,7 @@ private:
 public:
     std::shared_ptr<State> parent_ = nullptr;
     double evaluated_score_ = 0; // 探索上で評価したスコア
-    int last_action = -1;        // 探索木のルートノードで最初に選択した行動
+    int last_action_ = -1;       // 探索木のルートノードで最初に選択した行動
     virtual ~State() {}
 
     // ゲームの終了判定
@@ -48,7 +48,8 @@ public:
     // 現在の状況でプレイヤーが可能な行動を全て取得する
     virtual std::vector<int> legalActions() = 0;
 
-    virtual State *clone() = 0;
+    // インスタンスをコピーする。
+    virtual std::shared_ptr<State> clone() = 0;
 };
 
 // 探索時のソート用に評価を比較する
@@ -63,9 +64,10 @@ bool operator<(const std::shared_ptr<State> &state_1, const std::shared_ptr<Stat
 
 std::shared_ptr<State> cloneAdvanced(std::shared_ptr<State> state, int action)
 {
-    auto clone = std::shared_ptr<State>(state->clone());
+    auto clone = state->clone();
     clone->advance(action);
     clone->parent_ = state;
+    clone->last_action_ = action;
     return clone;
 }
 
@@ -123,7 +125,6 @@ public:
             point = 0;
         }
         this->turn_++;
-        this->last_action = action;
     }
 
     // [どのゲームでも実装する] : 現在の状況でプレイヤーが可能な行動を全て取得する
@@ -171,11 +172,11 @@ public:
         return ss.str();
     }
 
-    State *clone() override
+    std::shared_ptr<State> clone() override
     {
-        MazeState *cloned_state = new MazeState();
+        auto *cloned_state = new MazeState();
         *cloned_state = *this;
-        return cloned_state;
+        return std::shared_ptr<State>(std::move(cloned_state));
     }
 };
 
@@ -192,7 +193,7 @@ std::vector<int> randomAction(std::shared_ptr<State> state)
     std::vector<int> actions{};
     while (state->parent_ != nullptr)
     {
-        actions.emplace_back(state->last_action);
+        actions.emplace_back(state->last_action_);
         state = state->parent_;
     }
     std::reverse(actions.begin(), actions.end());
@@ -267,7 +268,7 @@ int main()
     // auto p = b;
     // while (p->parent_ != nullptr)
     // {
-    //     DUMP(p->last_action);
+    //     DUMP(p->last_action_);
     //     p = p->parent_;
     // }
     auto a = std::shared_ptr<State>(new MazeState(0));

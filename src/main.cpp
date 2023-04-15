@@ -1,7 +1,11 @@
 #include <pybind11/pybind11.h>
+#include <random>
+#include <memory>
+#include <algorithm>
 
 #define STRINGIFY(x) #x
 #define MACRO_STRINGIFY(x) STRINGIFY(x)
+std::mt19937 mt_for_action(0); // 行動選択用の乱数生成器を初期化
 
 int add(int i, int j)
 {
@@ -42,8 +46,9 @@ class State
 {
 private:
 public:
+    std::shared_ptr<State> parent_ = nullptr;
     double evaluated_score_ = 0; // 探索上で評価したスコア
-    int first_action_ = -1;      // 探索木のルートノードで最初に選択した行動
+    int last_action_ = -1;       // 直前に選択した行動
     virtual ~State() {}
 
     // ゲームの終了判定
@@ -62,12 +67,19 @@ public:
 
     // 現在の状況でプレイヤーが可能な行動を全て取得する
     virtual std::vector<int> legalActions() = 0;
+
+    // インスタンスをコピーする。
+    virtual std::shared_ptr<State> clone() = 0;
 };
 
 // 探索時のソート用に評価を比較する
 bool operator<(const State &state_1, const State &state_2)
 {
     return state_1.evaluated_score_ < state_2.evaluated_score_;
+}
+bool operator<(const std::shared_ptr<State> &state_1, const std::shared_ptr<State> &state_2)
+{
+    return state_1->evaluated_score_ < state_2->evaluated_score_;
 }
 
 class PyState : public State
@@ -100,6 +112,11 @@ public:
     {
         PYBIND11_OVERRIDE(/* Return type */ void, /* Parent class */ State, /* Name of function */ setEvaluateScore, /* args */ evaluated_score);
     }
+
+    std::shared_ptr<State> clone() override
+    {
+        PYBIND11_OVERRIDE_PURE(/* Return type */ std::shared_ptr<State>, /* Parent class */ State, /* Name of function */ clone);
+    }
 };
 
 double getEvaluatedScore(State *state)
@@ -107,6 +124,34 @@ double getEvaluatedScore(State *state)
     return state->evaluated_score_;
 }
 
+// これはpythonに渡さない
+std::shared_ptr<State> cloneAdvanced(std::shared_ptr<State> state, int action)
+{
+    auto clone = state->clone();
+    clone->advance(action);
+    clone->parent_ = state;
+    clone->last_action_ = action;
+    return clone;
+}
+
+// ランダムに行動を決定する
+std::vector<int> randomAction(std::shared_ptr<State> state)
+{
+    while (!state->isDone())
+    {
+        auto legal_actions = state->legalActions();
+        int action = legal_actions[mt_for_action() % (legal_actions.size())];
+        state = cloneAdvanced(state, action);
+    }
+    std::vector<int> actions{};
+    while (state->parent_ != nullptr)
+    {
+        actions.emplace_back(state->last_action_);
+        state = state->parent_;
+    }
+    std::reverse(actions.begin(), actions.end());
+    return actions;
+}
 namespace py = pybind11;
 
 PYBIND11_MODULE(thun_search, m)
@@ -151,9 +196,11 @@ PYBIND11_MODULE(thun_search, m)
         .def("evaluateScore", &State::evaluateScore)
         .def("advance", &State::advance)
         .def("legalActions", &State::legalActions)
-        .def("setEvaluateScore", &State::setEvaluateScore);
+        .def("setEvaluateScore", &State::setEvaluateScore)
+        .def("clone", &State::clone);
 
     m.def("getEvaluatedScore", &getEvaluatedScore);
+    m.def("randomAction", &randomAction);
 
 #ifdef VERSION_INFO
     m.attr("__version__") = MACRO_STRINGIFY(VERSION_INFO);
