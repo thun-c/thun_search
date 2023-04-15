@@ -15,11 +15,14 @@ int add(int i, int j)
 class Animal
 {
 public:
+    std::shared_ptr<Animal> parent = nullptr;
     virtual ~Animal() {}
     virtual std::string go(int n_times) = 0;
+    // virtual std::string go(int n_times) { return "not orverrided!!!!"; }
 };
 
-std::string call_go(Animal *animal)
+// std::string call_go(Animal *animal)
+std::string call_go(std::shared_ptr<Animal> animal)
 {
     return animal->go(3);
 }
@@ -184,7 +187,7 @@ PYBIND11_MODULE(thun_search, m)
         Some other explanation about the subtract function.
     )pbdoc");
 
-    py::class_<Animal, PyAnimal>(m, "Animal")
+    py::class_<Animal, PyAnimal, std::shared_ptr<Animal>>(m, "Animal")
         .def(py::init<>())
         .def("go", &Animal::go);
 
