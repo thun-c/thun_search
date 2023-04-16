@@ -10,9 +10,29 @@ def test_main():
 
 
 class Cat(thun.Animal):
+    def __init__(self) -> None:
+        print("Cat.__init__")
+        thun.Animal.__init__(self)
+        self.voice = "meow! "
 
     def go(self, n_times):
-        return "meow! " * n_times
+        return self.voice * n_times
+
+    def clone(self):
+        print("clone")
+        # create a new object without initializing it
+        cloned = Cat.__new__(Cat)
+        print("deb1")
+        print("deb1.5", cloned)
+        # clone C++ state
+        thun.Animal.__init__(cloned, self)
+        print("deb2")
+        print("deb2.5", cloned)
+        # clone Python state
+        cloned.__dict__.update(self.__dict__)
+        print("deb3")
+        print("deb3.5", cloned)
+        return cloned
 
 
 class Coord:
@@ -30,9 +50,18 @@ class MazeState(thun.State):
     END_TURN = 4
     INF = 1000000000
 
+    # def __init__(self) -> None:
+    #     thun.State.__init__(self)
+    #     # super().__init__()
+    #     self.turn_ = 0
+    #     self.points_ = [[0 for w in range(MazeState.W)]
+    #                     for h in range(MazeState.H)]
+    #     self.character_ = Coord(0, 0)
+    #     self.game_score_ = 0
+
     def __init__(self, seed=None) -> None:
-        # thun.State.__init__(self)
-        super().__init__()
+        thun.State.__init__(self)
+        # super().__init__()
         self.turn_ = 0
         self.points_ = [[0 for w in range(MazeState.W)]
                         for h in range(MazeState.H)]
@@ -75,7 +104,20 @@ class MazeState(thun.State):
         return actions
 
     def clone(self):
-        return copy(self)
+        print("clone")
+        # create a new object without initializing it
+        cloned = MazeState.__new__(MazeState)
+        print("deb1")
+        # print("deb1.5", cloned)
+        # clone C++ state
+        thun.State.__init__(cloned, self)
+        print("deb2")
+        # print("deb2.5", cloned)
+        # clone Python state
+        cloned.__dict__.update(self.__dict__)
+        print("deb3")
+        # print("deb3.5", cloned)
+        return cloned
 
     def __str__(self):
         ss = ""
@@ -98,6 +140,7 @@ if __name__ == "__main__":
     print([key for key in thun.__dict__.keys() if "__" != key[:2]])
     test_main()
     cat = Cat()
+    cat.voice = "org_mew! "
     print(thun.call_go(cat))
     state = MazeState(0)
     print("thun.State", [
@@ -109,8 +152,11 @@ if __name__ == "__main__":
           key for key in state.__dict__.keys() if True or "__" != key[:2]])
 
     print("state\n###########\n", state)
+    state2 = state.cloneAdvanced(1)
+    print("state2\n###########\n", state2)
+
     # actions = thun.randomAction(state)
-    state.advance(1)
-    state.evaluateScore()
-    print("state\n###########\n", state)
-    print(thun.getEvaluatedScore(state))
+    # state.advance(1)
+    # state.evaluateScore()
+    # print("state\n###########\n", state)
+    # print(thun.getEvaluatedScore(state))
