@@ -1,10 +1,56 @@
-import thun_search as thun
-import pandas
-from copy import copy, deepcopy
+import sys
 import random
+from copy import copy, deepcopy
+import pandas
+# import thun_search._thun_search as thun
+import thun_search as thun
+from abc import ABCMeta, abstractmethod
+from typing import List
+print([key for key in thun.__dict__.keys()])
+print([key for key in thun._thun_search.__dict__.keys()])
+# print([key for key in thun.__dict__.keys() if "__" != key[:2]])
+# print([key for key in thun._thun_search.__dict__.keys() if "__" != key[:2]])
 
 
-class Cat(thun.Animal):
+def clone_child(child, instance):
+
+    cloned = child.__new__(child)
+    # clone C++ state
+    thun.Animal.__init__(cloned, instance)
+    # clone Python state
+    cloned.__dict__ = {key: deepcopy(value)
+                       for key, value in instance.__dict__.items()}
+    print(type(child))
+    print(type(cloned))
+    return cloned
+
+
+class BaseState(thun.Animal):
+    @abstractmethod
+    def advance(self, action):
+        raise NotImplementedError(
+            f"{sys._getframe().f_code.co_name} is not implemented")
+
+    @abstractmethod
+    def legalActionsPy(self) -> List[int]:
+        raise NotImplementedError(
+            f"{sys._getframe().f_code.co_name} is not implemented")
+
+    def legalActions(self) -> thun.VectorInt:
+        return thun.VectorInt(self.legalActionsPy())
+
+    @abstractmethod
+    def advance(self, action):
+        raise NotImplementedError(
+            f"{sys._getframe().f_code.co_name} is not implemented")
+
+    @abstractmethod
+    def clone(self):
+        raise NotImplementedError(
+            f"{sys._getframe().f_code.co_name} is not implemented")
+
+
+class Cat(BaseState):
     def __init__(self) -> None:
         print("Cat.__init__")
         thun.Animal.__init__(self)
@@ -13,7 +59,7 @@ class Cat(thun.Animal):
         self.ar_ = []
         self.ar2_ = []
 
-    def advance(self, action):
+    def advance(self, action: List[int]):
         self.turn_ += 1
         self.ar_.append(self.turn_)
         self.ar2_.append([self.turn_*10, self.turn_*20])
@@ -21,31 +67,13 @@ class Cat(thun.Animal):
     def go(self, n_times):
         return self.voice * n_times
 
-    def legalActions(self) -> thun.VectorInt:
-        actions = thun.VectorInt([20, 30])
+    def legalActionsPy(self) -> List[int]:
+        actions = [20, 30]
         actions.append(10)
         return actions
 
     def clone(self):
-        # print("clone")
-        # create a new object without initializing it
-        cloned = Cat.__new__(Cat)
-        # print("deb1")
-        # print("deb1.5", cloned)
-        # clone C++ state
-        thun.Animal.__init__(cloned, self)
-        # print("deb2")
-        # print("deb2.5", cloned)
-        # clone Python state
-        # cloned.__dict__.update(self.__dict__)
-        # cloned.__dict__ = {key: copy(value)
-        #                    for key, value in self.__dict__.items()}
-        cloned.__dict__ = {key: deepcopy(value)
-                           for key, value in self.__dict__.items()}
-
-        # print("deb3")
-        # print("deb3.5", cloned)
-        return cloned
+        return clone_child(__class__, self)
 
 
 def print_dict(name, val):
@@ -60,6 +88,7 @@ if __name__ == "__main__":
 
     print("actions", [
         key for key in thun.VectorInt.__dict__.keys() if "__" != key[:2]])
+    print("type(Cat) ", type(Cat))
     cat = Cat()
     cat.voice = "org_mew! "
     print(thun.call_go(cat))

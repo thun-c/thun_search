@@ -93,7 +93,7 @@ public:
     }
 };
 
-PYBIND11_MODULE(thun_search, m)
+PYBIND11_MODULE(_thun_search, m)
 {
     py::bind_vector<std::vector<int>>(m, "VectorInt");
 
