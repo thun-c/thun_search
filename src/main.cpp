@@ -1,4 +1,5 @@
 #include <pybind11/pybind11.h>
+#include <pybind11/stl_bind.h>
 #include <random>
 #include <memory>
 #include <algorithm>
@@ -23,6 +24,11 @@ public:
     std::shared_ptr<Animal> cloneAdvanced(int action)
     {
         auto clone = this->clone();
+        auto actions = clone->legalActions();
+        for (auto action : actions)
+        {
+            cout << "action\t" << action << endl;
+        }
         clone->advance(action);
         clone->parent_ = shared_from_this();
         return clone;
@@ -38,6 +44,8 @@ public:
         // clone->parent_ = std::shared_ptr<Animal>(this);
         // cout << "cloneAdvancedVoid" << __LINE__ << endl;
     }
+
+    virtual std::vector<int> legalActions() = 0;
 };
 
 std::string call_go(std::shared_ptr<Animal> animal)
@@ -78,10 +86,17 @@ public:
         cout << "PyAnimal" << __LINE__ << endl;
         PYBIND11_OVERRIDE_PURE(/* Return type */ void, /* Parent class */ Animal, /* Name of function */ advance, /* args */ action);
     }
+    std::vector<int> legalActions() override
+    {
+        cout << "PyAnimal" << __LINE__ << endl;
+        PYBIND11_OVERRIDE_PURE(/* Return type */ std::vector<int>, /* Parent class */ Animal, /* Name of function */ legalActions);
+    }
 };
 
 PYBIND11_MODULE(thun_search, m)
 {
+    py::bind_vector<std::vector<int>>(m, "VectorInt");
+
     py::class_<Animal, PyAnimal, std::shared_ptr<Animal>>(m, "Animal")
         .def(py::init<>())
         .def(py::init<const Animal &>())
@@ -89,7 +104,8 @@ PYBIND11_MODULE(thun_search, m)
         .def("advance", &Animal::advance)
         .def("cloneAdvanced", &Animal::cloneAdvanced)
         .def("cloneAdvancedVoid", &Animal::cloneAdvancedVoid)
-        .def("clone", &Animal::clone);
+        .def("clone", &Animal::clone)
+        .def("legalActions", &Animal::legalActions);
 
     m.def("call_go", &call_go);
 
