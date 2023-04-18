@@ -12,16 +12,30 @@ using std::cerr;
 using std::cout;
 using std::endl;
 
-class Animal : public std::enable_shared_from_this<Animal>
+class State : public std::enable_shared_from_this<State>
 {
 public:
-    std::shared_ptr<Animal> parent_ = nullptr;
-    virtual ~Animal() {}
-    virtual std::string go(int n_times) = 0;
-    virtual std::shared_ptr<Animal> clone() const = 0;
-    virtual void advance(const int action) = 0;
+    std::shared_ptr<State> parent_ = nullptr;
+    double evaluated_score_ = 0; // 探索上で評価したスコア
+    int last_action_ = -1;       // 直前に選択した行動
 
-    std::shared_ptr<Animal> cloneAdvanced(int action)
+    virtual ~State() {}
+    virtual std::shared_ptr<State> clone() const = 0;
+    virtual void advance(const int action) = 0;
+    virtual std::vector<int> legalActions() = 0;
+
+    // ゲームの終了判定
+    virtual bool isDone() = 0;
+
+    // 探索用の盤面評価をする
+    virtual void evaluateScore() = 0;
+
+    virtual void setEvaluateScore(double evaluated_score)
+    {
+        this->evaluated_score_ = evaluated_score;
+    }
+
+    std::shared_ptr<State> cloneAdvanced(int action)
     {
         auto clone = this->clone();
         auto actions = clone->legalActions();
@@ -33,63 +47,47 @@ public:
         clone->parent_ = shared_from_this();
         return clone;
     }
-
-    void cloneAdvancedVoid(int action)
-    {
-        cout << "cloneAdvancedVoid" << __LINE__ << endl;
-        auto clone = this->clone();
-        cout << "cloneAdvancedVoid" << __LINE__ << endl;
-        clone->advance(action);
-        cout << "cloneAdvancedVoid" << __LINE__ << endl;
-        // clone->parent_ = std::shared_ptr<Animal>(this);
-        // cout << "cloneAdvancedVoid" << __LINE__ << endl;
-    }
-
-    virtual std::vector<int> legalActions() = 0;
 };
 
-std::string call_go(std::shared_ptr<Animal> animal)
-{
-    return animal->go(3);
-}
-
-class PyAnimal : public Animal
+class PyState : public State
 {
 public:
     /* Inherit the constructors */
-    using Animal::Animal;
-    PyAnimal(const Animal &animal) : Animal(animal) {}
+    using State::State;
+    PyState(const State &state) : State(state) {}
     /* Trampoline (need one for each virtual function) */
-    std::string go(int n_times) override
-    {
-        PYBIND11_OVERRIDE_PURE(
-            std::string, /* Return type */
-            Animal,      /* Parent class */
-            go,          /* Name of function in C++ (must match Python name) */
-            n_times      /* Argument(s) */
-        );
-    }
-    std::shared_ptr<Animal> clone() const override
+    std::shared_ptr<State> clone() const override
     {
         auto self = py::cast(this);
         auto cloned = self.attr("clone")();
 
         auto keep_python_state_alive = std::make_shared<py::object>(cloned);
-        auto ptr = cloned.cast<PyAnimal *>();
+        auto ptr = cloned.cast<PyState *>();
 
         // aliasing shared_ptr: points to `A_trampoline* ptr` but refcounts the Python object
-        return std::shared_ptr<Animal>(keep_python_state_alive, ptr);
+        return std::shared_ptr<State>(keep_python_state_alive, ptr);
     }
 
     void advance(int action) override
     {
-        cout << "PyAnimal" << __LINE__ << endl;
-        PYBIND11_OVERRIDE_PURE(/* Return type */ void, /* Parent class */ Animal, /* Name of function */ advance, /* args */ action);
+        PYBIND11_OVERRIDE_PURE(/* Return type */ void, /* Parent class */ State, /* Name of function */ advance, /* args */ action);
     }
     std::vector<int> legalActions() override
     {
-        cout << "PyAnimal" << __LINE__ << endl;
-        PYBIND11_OVERRIDE_PURE(/* Return type */ std::vector<int>, /* Parent class */ Animal, /* Name of function */ legalActions);
+        PYBIND11_OVERRIDE_PURE(/* Return type */ std::vector<int>, /* Parent class */ State, /* Name of function */ legalActions);
+    }
+    bool isDone() override
+    {
+        PYBIND11_OVERRIDE_PURE(/* Return type */ bool, /* Parent class */ State, /* Name of function */ isDone);
+    }
+
+    void evaluateScore() override
+    {
+        PYBIND11_OVERRIDE_PURE(/* Return type */ void, /* Parent class */ State, /* Name of function */ evaluateScore);
+    }
+    void setEvaluateScore(double evaluated_score) override
+    {
+        PYBIND11_OVERRIDE(/* Return type */ void, /* Parent class */ State, /* Name of function */ setEvaluateScore, /* args */ evaluated_score);
     }
 };
 
@@ -97,17 +95,16 @@ PYBIND11_MODULE(_thun_search, m)
 {
     py::bind_vector<std::vector<int>>(m, "VectorInt");
 
-    py::class_<Animal, PyAnimal, std::shared_ptr<Animal>>(m, "Animal")
+    py::class_<State, PyState, std::shared_ptr<State>>(m, "State")
         .def(py::init<>())
-        .def(py::init<const Animal &>())
-        .def("go", &Animal::go)
-        .def("advance", &Animal::advance)
-        .def("cloneAdvanced", &Animal::cloneAdvanced)
-        .def("cloneAdvancedVoid", &Animal::cloneAdvancedVoid)
-        .def("clone", &Animal::clone)
-        .def("legalActions", &Animal::legalActions);
-
-    m.def("call_go", &call_go);
+        .def(py::init<const State &>())
+        .def("isDone", &State::isDone)
+        .def("evaluateScore", &State::evaluateScore)
+        .def("setEvaluateScore", &State::setEvaluateScore)
+        .def("advance", &State::advance)
+        .def("cloneAdvanced", &State::cloneAdvanced)
+        .def("clone", &State::clone)
+        .def("legalActions", &State::legalActions);
 
 #ifdef VERSION_INFO
     m.attr("__version__") = MACRO_STRINGIFY(VERSION_INFO);

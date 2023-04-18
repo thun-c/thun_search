@@ -16,7 +16,7 @@ def clone_child(child, instance):
 
     cloned = child.__new__(child)
     # clone C++ state
-    thun.Animal.__init__(cloned, instance)
+    thun.State.__init__(cloned, instance)
     # clone Python state
     cloned.__dict__ = {key: deepcopy(value)
                        for key, value in instance.__dict__.items()}
@@ -25,7 +25,7 @@ def clone_child(child, instance):
     return cloned
 
 
-class BaseState(thun.Animal):
+class BaseState(thun.State):
     @abstractmethod
     def advance(self, action):
         raise NotImplementedError(
@@ -53,8 +53,7 @@ class BaseState(thun.Animal):
 class Cat(BaseState):
     def __init__(self) -> None:
         print("Cat.__init__")
-        thun.Animal.__init__(self)
-        self.voice = "meow! "
+        thun.State.__init__(self)
         self.turn_ = 0
         self.ar_ = []
         self.ar2_ = []
@@ -63,9 +62,6 @@ class Cat(BaseState):
         self.turn_ += 1
         self.ar_.append(self.turn_)
         self.ar2_.append([self.turn_*10, self.turn_*20])
-
-    def go(self, n_times):
-        return self.voice * n_times
 
     def legalActionsPy(self) -> List[int]:
         actions = [20, 30]
@@ -90,17 +86,12 @@ if __name__ == "__main__":
         key for key in thun.VectorInt.__dict__.keys() if "__" != key[:2]])
     print("type(Cat) ", type(Cat))
     cat = Cat()
-    cat.voice = "org_mew! "
-    print(thun.call_go(cat))
     cat2 = cat.clone()
-    cat2.voice = "cat2 "
     print("cat2.turn_", cat2.turn_)
-    print(cat2.go(2))
     # cat.cloneAdvancedVoid(0)
     # cat3 = cat2.clone()
     cat3 = cat2.cloneAdvanced(0)
     print("cat3.turn_", cat3.turn_)
-    print(cat3.go(2))
     print_dict("cat", cat)
     print_dict("cat2", cat2)
     print_dict("cat3", cat3)
