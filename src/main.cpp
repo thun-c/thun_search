@@ -39,12 +39,9 @@ public:
     {
         auto clone = this->clone();
         auto actions = clone->legalActionsCpp();
-        for (auto action : actions)
-        {
-            cout << "action\t" << action << endl;
-        }
         clone->advance(action);
         clone->parent_ = shared_from_this();
+        clone->last_action_ = action;
         return clone;
     }
 };
@@ -91,6 +88,29 @@ public:
     }
 };
 
+// ランダムに行動を決定する
+std::vector<int> randomAction(std::shared_ptr<State> state)
+{
+    using namespace std;
+    cout << "C: randomAction " << __LINE__ << endl;
+    while (!state->isDone())
+    {
+        auto legal_actions = state->legalActionsCpp();
+
+        int action = legal_actions[mt_for_action() % (legal_actions.size())];
+        cout << "C: randomAction " << __LINE__ << " action" << action << endl;
+        state = state->cloneAdvanced(action);
+    }
+    std::vector<int> actions{};
+    while (state->parent_ != nullptr)
+    {
+        actions.emplace_back(state->last_action_);
+        state = state->parent_;
+    }
+    std::reverse(actions.begin(), actions.end());
+    return actions;
+}
+
 PYBIND11_MODULE(_thun_search, m)
 {
     py::bind_vector<std::vector<int>>(m, "VectorInt");
@@ -105,6 +125,8 @@ PYBIND11_MODULE(_thun_search, m)
         .def("cloneAdvanced", &State::cloneAdvanced)
         .def("clone", &State::clone)
         .def("legalActionsCpp", &State::legalActionsCpp);
+
+    m.def("randomAction", &randomAction);
 
 #ifdef VERSION_INFO
     m.attr("__version__") = MACRO_STRINGIFY(VERSION_INFO);

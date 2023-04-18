@@ -58,8 +58,8 @@ class Coord:
 
 
 class MazeState(BaseState):
-    dy = [1, -1, 0, 0]
-    dx = [0, 0, 1, 1]
+    dy = [0, 0, 1, -1]  # 右、左、下、上への移動方向のy成分
+    dx = [1, -1, 0, 0]  # 右、左、下、上への移動方向のx成分
     H = 3
     W = 4
     END_TURN = 4
@@ -107,6 +107,8 @@ class MazeState(BaseState):
             tx = self.character_.x_+MazeState.dx[action]
             if ty >= 0 and ty < MazeState.H and tx >= 0 and tx < MazeState.W:
                 actions.append(action)
+        print(f"py: legalActions {actions}")
+
         return actions
 
     def clone(self):
@@ -140,7 +142,8 @@ if __name__ == "__main__":
     print("state", [
           key for key in state.__dict__.keys() if True or "__" != key[:2]])
 
+    # print("state\n###########\n", state)
+    # state2 = state.cloneAdvanced(1)
+    # print("state2\n###########\n", state2)
     print("state\n###########\n", state)
-    state2 = state.cloneAdvanced(1)
-    print("state2\n###########\n", state2)
-    print("state\n###########\n", state)
+    print(thun.randomAction(state))
