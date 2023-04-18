@@ -22,7 +22,7 @@ public:
     virtual ~State() {}
     virtual std::shared_ptr<State> clone() const = 0;
     virtual void advance(const int action) = 0;
-    virtual std::vector<int> legalActions() = 0;
+    virtual std::vector<int> legalActionsCpp() = 0;
 
     // ゲームの終了判定
     virtual bool isDone() = 0;
@@ -38,7 +38,7 @@ public:
     std::shared_ptr<State> cloneAdvanced(int action)
     {
         auto clone = this->clone();
-        auto actions = clone->legalActions();
+        auto actions = clone->legalActionsCpp();
         for (auto action : actions)
         {
             cout << "action\t" << action << endl;
@@ -72,9 +72,9 @@ public:
     {
         PYBIND11_OVERRIDE_PURE(/* Return type */ void, /* Parent class */ State, /* Name of function */ advance, /* args */ action);
     }
-    std::vector<int> legalActions() override
+    std::vector<int> legalActionsCpp() override
     {
-        PYBIND11_OVERRIDE_PURE(/* Return type */ std::vector<int>, /* Parent class */ State, /* Name of function */ legalActions);
+        PYBIND11_OVERRIDE_PURE(/* Return type */ std::vector<int>, /* Parent class */ State, /* Name of function */ legalActionsCpp);
     }
     bool isDone() override
     {
@@ -104,7 +104,7 @@ PYBIND11_MODULE(_thun_search, m)
         .def("advance", &State::advance)
         .def("cloneAdvanced", &State::cloneAdvanced)
         .def("clone", &State::clone)
-        .def("legalActions", &State::legalActions);
+        .def("legalActionsCpp", &State::legalActionsCpp);
 
 #ifdef VERSION_INFO
     m.attr("__version__") = MACRO_STRINGIFY(VERSION_INFO);
