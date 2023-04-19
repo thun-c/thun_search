@@ -92,13 +92,11 @@ public:
 std::vector<int> randomAction(std::shared_ptr<State> state)
 {
     using namespace std;
-    cout << "C: randomAction " << __LINE__ << endl;
     while (!state->isDone())
     {
         auto legal_actions = state->legalActionsCpp();
 
         int action = legal_actions[mt_for_action() % (legal_actions.size())];
-        cout << "C: randomAction " << __LINE__ << " action" << action << endl;
         state = state->cloneAdvanced(action);
     }
     std::vector<int> actions{};

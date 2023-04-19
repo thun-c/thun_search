@@ -5,11 +5,9 @@ import pandas
 # import thun_search._thun_search as thun
 import thun_search as thun
 from abc import ABCMeta, abstractmethod
-from typing import List
-print([key for key in thun.__dict__.keys()])
-print([key for key in thun._thun_search.__dict__.keys()])
-# print([key for key in thun.__dict__.keys() if "__" != key[:2]])
-# print([key for key in thun._thun_search.__dict__.keys() if "__" != key[:2]])
+from typing import List, Callable
+print("thun", [key for key in thun.__dict__.keys()])
+print("thun._thun_earch", [key for key in thun._thun_search.__dict__.keys()])
 
 
 def clone_child(child, instance):
@@ -20,8 +18,6 @@ def clone_child(child, instance):
     # clone Python state
     cloned.__dict__ = {key: deepcopy(value)
                        for key, value in instance.__dict__.items()}
-    print(type(child))
-    print(type(cloned))
     return cloned
 
 
@@ -48,6 +44,27 @@ class BaseState(thun.State):
     def clone(self):
         raise NotImplementedError(
             f"{sys._getframe().f_code.co_name} is not implemented.\nIt is recommended to write \"return clone_child(__class__, self)\"")
+
+    @abstractmethod
+    def __str__(self):
+        raise NotImplementedError(
+            f"{sys._getframe().f_code.co_name} is not implemented")
+
+
+def show_game(state: BaseState, actions: List[int]):
+    state = state.clone()
+    line = "#"*30
+    print(line)
+    print(state)
+    for action in actions:
+        state.advance(action)
+        print(line)
+        print(state)
+    print(line)
+
+
+def play_game(state: BaseState, ai: Callable):
+    show_game(state, ai(state))
 
 
 class Coord:
@@ -107,8 +124,6 @@ class MazeState(BaseState):
             tx = self.character_.x_+MazeState.dx[action]
             if ty >= 0 and ty < MazeState.H and tx >= 0 and tx < MazeState.W:
                 actions.append(action)
-        print(f"py: legalActions {actions}")
-
         return actions
 
     def clone(self):
@@ -131,19 +146,21 @@ class MazeState(BaseState):
 
 
 if __name__ == "__main__":
-    print("thun\__version__", thun.__version__)
-    print([key for key in thun.__dict__.keys() if "__" != key[:2]])
+    print("thun.__version__", thun.__version__)
+    # print([key for key in thun.__dict__.keys() if "__" != key[:2]])
+    # state = MazeState(0)
+    # print("thun.State", [
+    #       key for key in thun.State.__dict__.keys() if "__" != key[:2]])
+    # print("MazeState", [
+    #       key for key in MazeState.__dict__.keys() if "__" != key[:2]])
+
+    # print("state", [
+    #       key for key in state.__dict__.keys() if True or "__" != key[:2]])
+
     state = MazeState(0)
-    print("thun.State", [
-          key for key in thun.State.__dict__.keys() if "__" != key[:2]])
-    print("MazeState", [
-          key for key in MazeState.__dict__.keys() if "__" != key[:2]])
-
-    print("state", [
-          key for key in state.__dict__.keys() if True or "__" != key[:2]])
-
     # print("state\n###########\n", state)
     # state2 = state.cloneAdvanced(1)
     # print("state2\n###########\n", state2)
-    print("state\n###########\n", state)
-    print(thun.randomAction(state))
+    # print("state\n###########\n", state)
+    # print(thun.randomAction(state))
+    play_game(state, thun.randomAction)
