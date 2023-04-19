@@ -1,10 +1,9 @@
 import sys
 import random
-from copy import copy, deepcopy
-import pandas
+from copy import deepcopy
 # import thun_search._thun_search as thun
 import thun_search as thun
-from abc import ABCMeta, abstractmethod
+from abc import abstractmethod
 from typing import List, Callable
 print("thun", [key for key in thun.__dict__.keys()])
 print("thun._thun_earch", [key for key in thun._thun_search.__dict__.keys()])
@@ -36,14 +35,16 @@ class BaseState(thun.State):
         return thun.VectorInt(self.legalActions())
 
     @abstractmethod
-    def advance(self, action):
+    def isDone(self):
         raise NotImplementedError(
             f"{sys._getframe().f_code.co_name} is not implemented")
 
     @abstractmethod
     def clone(self):
         raise NotImplementedError(
-            f"{sys._getframe().f_code.co_name} is not implemented.\nIt is recommended to write \"return clone_child(__class__, self)\"")
+            f"{sys._getframe().f_code.co_name} is not implemented.\n"
+            f"It is recommended to write "
+            f"\"return clone_child(__class__, self)\"")
 
     @abstractmethod
     def __str__(self):
