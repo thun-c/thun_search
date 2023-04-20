@@ -1,5 +1,5 @@
-from ._thun_search import *
-__version__ = _thun_search.__version__
+from ._thunsearch import *
+__version__ = _thunsearch.__version__
 
 
 class Test:

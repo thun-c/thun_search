@@ -109,7 +109,7 @@ std::vector<int> randomAction(std::shared_ptr<State> state)
     return actions;
 }
 
-PYBIND11_MODULE(_thun_search, m)
+PYBIND11_MODULE(_thunsearch, m)
 {
     py::bind_vector<std::vector<int>>(m, "VectorInt");
 

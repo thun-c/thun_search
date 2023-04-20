@@ -1,12 +1,12 @@
 import sys
 import random
 from copy import deepcopy
-# import thun_search._thun_search as thun
-import thun_search as thun
+# import thunsearch._thunsearch as thun
+import thunsearch as thun
 from abc import abstractmethod
 from typing import List, Callable
 print("thun", [key for key in thun.__dict__.keys()])
-print("thun._thun_earch", [key for key in thun._thun_search.__dict__.keys()])
+print("thun._thunsearch", [key for key in thun._thunsearch.__dict__.keys()])
 
 
 def clone_child(child, instance):

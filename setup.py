@@ -131,13 +131,13 @@ class CMakeBuild(build_ext):
 # The information here can also be placed in setup.cfg - better separation of
 # logic and declaration, and simpler if you include description/version in a file.
 setup(
-    name="thun_search",
+    name="thunsearch",
     version="0.0.1",
     author="Thunder",
     author_email="aoki.eita1130@gmail.com",
     description="A test project using pybind11 and CMake",
     long_description="",
-    ext_modules=[CMakeExtension("thun_search._thun_search")],
+    ext_modules=[CMakeExtension("thunsearch._thunsearch")],
     packages=find_packages(),
     cmdclass={"build_ext": CMakeBuild},
     zip_safe=False,
