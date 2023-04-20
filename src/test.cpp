@@ -38,6 +38,9 @@ public:
     // ゲームの終了判定
     virtual bool is_done() = 0;
 
+    // ゲームの終了判定（合法だが悪い終わり方。罠にはまるなど）
+    virtual bool is_dead() = 0;
+
     // 探索用の盤面評価をする
     virtual void evaluate_score() = 0;
 
@@ -113,6 +116,13 @@ public:
     {
         return this->turn_ == END_TURN;
     }
+
+    // [どのゲームでも実装する] : ゲームの終了判定（合法だが悪い終わり方）
+    bool is_dead() override
+    {
+        return false;
+    }
+
     // [どのゲームでも実装する] : 探索用の盤面評価をする
     void evaluate_score() override
     {
@@ -229,6 +239,10 @@ std::vector<int> beamSearchAction(std::shared_ptr<State> state, const int beam_w
             for (const auto &action : legal_actions)
             {
                 auto next_state = now_state->cloneAdvanced(action);
+                if (next_state->is_dead())
+                {
+                    continue;
+                }
                 next_state->evaluate_score();
                 next_state->last_action_ = action;
                 assert(next_state->parent_ != nullptr);
