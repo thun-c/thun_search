@@ -1,4 +1,4 @@
-#define DUMP(x) std::cerr << #x << ":\t" << x << std::endl;
+#define DUMP(x) std::cout << #x << ":\t" << x << std::endl;
 #include <string>
 #include <sstream>
 #include <random>
@@ -6,6 +6,10 @@
 #include <queue>
 #include <memory>
 #include <algorithm>
+#include <assert.h>
+using std::cerr;
+using std::cout;
+using std::endl;
 // 座標を保持する
 struct Coord
 {
@@ -22,7 +26,7 @@ constexpr const int H = 3;  // 迷路の高さ
 constexpr const int W = 4;  // 迷路の幅
 constexpr int END_TURN = 4; // ゲーム終了ターン
 
-class State
+class State : public std::enable_shared_from_this<State>
 {
 private:
 public:
@@ -50,6 +54,16 @@ public:
 
     // インスタンスをコピーする。
     virtual std::shared_ptr<State> clone() = 0;
+
+    std::shared_ptr<State> cloneAdvanced(int action)
+    {
+        auto clone = this->clone();
+        auto actions = clone->legal_actions();
+        clone->advance(action);
+        clone->parent_ = shared_from_this();
+        clone->last_action_ = action;
+        return clone;
+    }
 };
 
 // 探索時のソート用に評価を比較する
@@ -60,15 +74,6 @@ bool operator<(const State &state_1, const State &state_2)
 bool operator<(const std::shared_ptr<State> &state_1, const std::shared_ptr<State> &state_2)
 {
     return state_1->evaluated_score_ < state_2->evaluated_score_;
-}
-
-std::shared_ptr<State> cloneAdvanced(std::shared_ptr<State> state, int action)
-{
-    auto clone = state->clone();
-    clone->advance(action);
-    clone->parent_ = state;
-    clone->last_action_ = action;
-    return clone;
 }
 
 class MazeState : public State
@@ -188,7 +193,7 @@ std::vector<int> randomAction(std::shared_ptr<State> state)
         auto legal_actions = state->legal_actions();
         int action = legal_actions[mt_for_action() % (legal_actions.size())];
         DUMP(action);
-        state = cloneAdvanced(state, action);
+        state = state->cloneAdvanced(action);
     }
     std::vector<int> actions{};
     while (state->parent_ != nullptr)
@@ -200,44 +205,56 @@ std::vector<int> randomAction(std::shared_ptr<State> state)
     return actions;
 }
 
-// // ビーム幅と深さを指定してビームサーチで行動を決定する
-// int beamSearchAction(State *state, const int beam_width, const int beam_depth)
-// {
-//     std::priority_queue<State> now_beam;
-//     State *best_state;
+// ビーム幅と深さを指定してビームサーチで行動を決定する
+std::vector<int> beamSearchAction(std::shared_ptr<State> state, const int beam_width)
+{
+    std::priority_queue<std::shared_ptr<State>> now_beam;
+    std::shared_ptr<State> best_state;
 
-//     now_beam.emplace(*state);
-//     for (int t = 0; t < beam_depth; t++)
-//     {
-//         std::priority_queue<State> next_beam;
-//         for (int i = 0; i < beam_width; i++)
-//         {
-//             if (now_beam.empty())
-//                 break;
-//             State now_state = now_beam.top();
-//             now_beam.pop();
-//             auto legal_actions = now_state.legal_actions();
-//             for (const auto &action : legal_actions)
-//             {
-//                 State next_state = now_state;
-//                 next_state.advance(action);
-//                 next_state.evaluate_score();
-//                 if (t == 0)
-//                     next_state.first_action_ = action;
-//                 next_beam.push(next_state);
-//             }
-//         }
+    now_beam.emplace(state);
+    for (int t = 0;; t++)
+    {
+        std::priority_queue<std::shared_ptr<State>> next_beam;
+        for (int i = 0; i < beam_width; i++)
+        {
+            if (now_beam.empty())
+                break;
+            std::shared_ptr<State> now_state = now_beam.top();
+            if (i >= 1)
+            {
+                assert(now_state->parent_ != nullptr);
+            }
+            now_beam.pop();
+            auto legal_actions = now_state->legal_actions();
+            for (const auto &action : legal_actions)
+            {
+                auto next_state = now_state->cloneAdvanced(action);
+                next_state->evaluate_score();
+                next_state->last_action_ = action;
+                assert(next_state->parent_ != nullptr);
+                next_beam.push(next_state);
+            }
+        }
 
-//         now_beam = next_beam;
-//         best_state = now_beam.top();
+        now_beam = next_beam;
+        best_state = now_beam.top();
+        if (best_state->is_done())
+        {
+            cout << "best_state->is_done" << endl;
+            DUMP(best_state->evaluated_score_);
+            break;
+        }
+    }
 
-//         if (best_state.is_done())
-//         {
-//             break;
-//         }
-//     }
-//     return best_state.first_action_;
-// }
+    std::vector<int> actions{};
+    while (best_state->parent_ != nullptr)
+    {
+        actions.emplace_back(best_state->last_action_);
+        best_state = best_state->parent_;
+    }
+    std::reverse(actions.begin(), actions.end());
+    return actions;
+}
 
 // // シードを指定してゲーム状況を表示しながらAIにプレイさせる。
 // void playGame(const int seed)
@@ -272,7 +289,8 @@ int main()
     //     p = p->parent_;
     // }
     auto a = std::shared_ptr<State>(new MazeState(0));
-    auto actions = randomAction(a);
+    // auto actions = randomAction(a);
+    auto actions = beamSearchAction(a, 20);
     cerr << "end-------" << endl;
     for (auto action : actions)
     {
