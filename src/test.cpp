@@ -32,10 +32,10 @@ public:
     virtual ~State() {}
 
     // ゲームの終了判定
-    virtual bool isDone() = 0;
+    virtual bool is_done() = 0;
 
     // 探索用の盤面評価をする
-    virtual void evaluateScore() = 0;
+    virtual void evaluate_score() = 0;
 
     virtual void setEvaluateScore(double evaluated_score)
     {
@@ -46,7 +46,7 @@ public:
     virtual void advance(const int action) = 0;
 
     // 現在の状況でプレイヤーが可能な行動を全て取得する
-    virtual std::vector<int> legalActions() = 0;
+    virtual std::vector<int> legal_actions() = 0;
 
     // インスタンスをコピーする。
     virtual std::shared_ptr<State> clone() = 0;
@@ -104,12 +104,12 @@ public:
     }
 
     // [どのゲームでも実装する] : ゲームの終了判定
-    bool isDone() override
+    bool is_done() override
     {
         return this->turn_ == END_TURN;
     }
     // [どのゲームでも実装する] : 探索用の盤面評価をする
-    void evaluateScore() override
+    void evaluate_score() override
     {
         this->evaluated_score_ = this->game_score_; // 簡単のため、まずはゲームスコアをそのまま盤面の評価とする
     }
@@ -128,7 +128,7 @@ public:
     }
 
     // [どのゲームでも実装する] : 現在の状況でプレイヤーが可能な行動を全て取得する
-    std::vector<int> legalActions() override
+    std::vector<int> legal_actions() override
     {
         std::vector<int> actions;
         for (int action = 0; action < 4; action++)
@@ -183,9 +183,9 @@ public:
 // ランダムに行動を決定する
 std::vector<int> randomAction(std::shared_ptr<State> state)
 {
-    while (!state->isDone())
+    while (!state->is_done())
     {
-        auto legal_actions = state->legalActions();
+        auto legal_actions = state->legal_actions();
         int action = legal_actions[mt_for_action() % (legal_actions.size())];
         DUMP(action);
         state = cloneAdvanced(state, action);
@@ -216,12 +216,12 @@ std::vector<int> randomAction(std::shared_ptr<State> state)
 //                 break;
 //             State now_state = now_beam.top();
 //             now_beam.pop();
-//             auto legal_actions = now_state.legalActions();
+//             auto legal_actions = now_state.legal_actions();
 //             for (const auto &action : legal_actions)
 //             {
 //                 State next_state = now_state;
 //                 next_state.advance(action);
-//                 next_state.evaluateScore();
+//                 next_state.evaluate_score();
 //                 if (t == 0)
 //                     next_state.first_action_ = action;
 //                 next_beam.push(next_state);
@@ -231,7 +231,7 @@ std::vector<int> randomAction(std::shared_ptr<State> state)
 //         now_beam = next_beam;
 //         best_state = now_beam.top();
 
-//         if (best_state.isDone())
+//         if (best_state.is_done())
 //         {
 //             break;
 //         }
@@ -247,7 +247,7 @@ std::vector<int> randomAction(std::shared_ptr<State> state)
 
 //     auto state = MazeState(seed);
 //     cout << state.toString() << endl;
-//     while (!state.isDone())
+//     while (!state.is_done())
 //     {
 //         state.advance(randomAction(&state));
 //         cout << state.toString() << endl;

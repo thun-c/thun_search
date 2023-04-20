@@ -22,13 +22,13 @@ public:
     virtual ~State() {}
     virtual std::shared_ptr<State> clone() const = 0;
     virtual void advance(const int action) = 0;
-    virtual std::vector<int> legalActionsCpp() = 0;
+    virtual std::vector<int> _legal_actions() = 0;
 
     // ゲームの終了判定
-    virtual bool isDone() = 0;
+    virtual bool is_done() = 0;
 
     // 探索用の盤面評価をする
-    virtual void evaluateScore() = 0;
+    virtual void evaluate_score() = 0;
 
     virtual void setEvaluateScore(double evaluated_score)
     {
@@ -38,7 +38,7 @@ public:
     std::shared_ptr<State> cloneAdvanced(int action)
     {
         auto clone = this->clone();
-        auto actions = clone->legalActionsCpp();
+        auto actions = clone->_legal_actions();
         clone->advance(action);
         clone->parent_ = shared_from_this();
         clone->last_action_ = action;
@@ -69,18 +69,18 @@ public:
     {
         PYBIND11_OVERRIDE_PURE(/* Return type */ void, /* Parent class */ State, /* Name of function */ advance, /* args */ action);
     }
-    std::vector<int> legalActionsCpp() override
+    std::vector<int> _legal_actions() override
     {
-        PYBIND11_OVERRIDE_PURE(/* Return type */ std::vector<int>, /* Parent class */ State, /* Name of function */ legalActionsCpp);
+        PYBIND11_OVERRIDE_PURE(/* Return type */ std::vector<int>, /* Parent class */ State, /* Name of function */ _legal_actions);
     }
-    bool isDone() override
+    bool is_done() override
     {
-        PYBIND11_OVERRIDE_PURE(/* Return type */ bool, /* Parent class */ State, /* Name of function */ isDone);
+        PYBIND11_OVERRIDE_PURE(/* Return type */ bool, /* Parent class */ State, /* Name of function */ is_done);
     }
 
-    void evaluateScore() override
+    void evaluate_score() override
     {
-        PYBIND11_OVERRIDE_PURE(/* Return type */ void, /* Parent class */ State, /* Name of function */ evaluateScore);
+        PYBIND11_OVERRIDE_PURE(/* Return type */ void, /* Parent class */ State, /* Name of function */ evaluate_score);
     }
     void setEvaluateScore(double evaluated_score) override
     {
@@ -92,9 +92,9 @@ public:
 std::vector<int> randomAction(std::shared_ptr<State> state)
 {
     using namespace std;
-    while (!state->isDone())
+    while (!state->is_done())
     {
-        auto legal_actions = state->legalActionsCpp();
+        auto legal_actions = state->_legal_actions();
 
         int action = legal_actions[mt_for_action() % (legal_actions.size())];
         state = state->cloneAdvanced(action);
@@ -116,13 +116,13 @@ PYBIND11_MODULE(_thun_search, m)
     py::class_<State, PyState, std::shared_ptr<State>>(m, "State")
         .def(py::init<>())
         .def(py::init<const State &>())
-        .def("isDone", &State::isDone)
-        .def("evaluateScore", &State::evaluateScore)
+        .def("is_done", &State::is_done)
+        .def("evaluate_score", &State::evaluate_score)
         .def("setEvaluateScore", &State::setEvaluateScore)
         .def("advance", &State::advance)
         .def("cloneAdvanced", &State::cloneAdvanced)
         .def("clone", &State::clone)
-        .def("legalActionsCpp", &State::legalActionsCpp);
+        .def("_legal_actions", &State::_legal_actions);
 
     m.def("randomAction", &randomAction);
 

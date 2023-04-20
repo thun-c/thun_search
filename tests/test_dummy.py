@@ -27,15 +27,15 @@ class BaseState(thun.State):
             f"{sys._getframe().f_code.co_name} is not implemented")
 
     @abstractmethod
-    def legalActions(self) -> List[int]:
+    def legal_actions(self) -> List[int]:
         raise NotImplementedError(
             f"{sys._getframe().f_code.co_name} is not implemented")
 
-    def legalActionsCpp(self) -> thun.VectorInt:
-        return thun.VectorInt(self.legalActions())
+    def _legal_actions(self) -> thun.VectorInt:
+        return thun.VectorInt(self.legal_actions())
 
     @abstractmethod
-    def isDone(self):
+    def is_done(self):
         raise NotImplementedError(
             f"{sys._getframe().f_code.co_name} is not implemented")
 
@@ -101,10 +101,10 @@ class MazeState(BaseState):
                         continue
                     self.points_[y][x] = random.randrange(10)
 
-    def isDone(self):
+    def is_done(self):
         return self.turn_ == MazeState.END_TURN
 
-    def evaluateScore(self):
+    def evaluate_score(self):
         super().setEvaluateScore(self.game_score_)
         return
 
@@ -118,7 +118,7 @@ class MazeState(BaseState):
         self.turn_ += 1
         return
 
-    def legalActions(self):
+    def legal_actions(self):
         actions = []
         for action in range(4):
             ty = self.character_.y_+MazeState.dy[action]
