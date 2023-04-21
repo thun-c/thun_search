@@ -7,6 +7,7 @@
 #include <memory>
 #include <algorithm>
 #include <assert.h>
+#include <chrono>
 using std::cerr;
 using std::cout;
 using std::endl;
@@ -274,8 +275,6 @@ std::vector<int> beamSearchAction_naive(std::shared_ptr<State> state, const int 
         best_state = now_beam.top();
         if (best_state->is_done())
         {
-            cout << "best_state->is_done" << endl;
-            DUMP(best_state->evaluated_score_);
             break;
         }
     }
@@ -377,6 +376,30 @@ void show_game(std::shared_ptr<State> state, const std::vector<int> &actions)
     }
     cout << line << endl;
 }
+using AIFunction = std::function<std::vector<int>(std::shared_ptr<State>)>;
+using StringAIPair = std::pair<std::string, AIFunction>;
+
+void testAiSpeed(const StringAIPair &ai, const int game_number, const int per_game_number)
+{
+    using std::cout;
+    using std::endl;
+    std::mt19937 mt_for_construct(0);
+    std::chrono::high_resolution_clock::time_point diff_sum;
+    for (int i = 0; i < game_number; i++)
+    {
+        auto state = std::make_shared<MazeState>(i);
+        auto start_time = std::chrono::high_resolution_clock::now();
+        for (int j = 0; j < per_game_number; j++)
+        {
+            ai.second(state);
+        }
+        auto diff = std::chrono::high_resolution_clock::now() - start_time;
+        diff_sum += diff;
+    }
+    double time_mean = std::chrono::duration_cast<std::chrono::milliseconds>(diff_sum.time_since_epoch()).count() / (double)(game_number);
+    cout << "Time of " << ai.first << ":\t" << time_mean << "ms" << endl;
+}
+
 int main()
 {
     using namespace std;
@@ -398,9 +421,16 @@ int main()
     auto state = std::shared_ptr<State>(new MazeState(4));
     // auto actions = randomAction(state);
     auto actions = beamSearchAction(state, 20);
+
+    int beam_width = 20;
+    const auto &beam_naive_ai = StringAIPair("beamSearchAction_naive", [&](std::shared_ptr<State> state)
+                                             { return beamSearchAction_naive(state, beam_width); });
+    const auto &beam_ai = StringAIPair("beamSearchAction", [&](std::shared_ptr<State> state)
+                                       { return beamSearchAction(state, beam_width); });
     // auto actions = beamSearchAction_naive(state, 20);
     // cerr << "end-------" << endl;
     show_game(state, actions);
-
+    testAiSpeed(beam_naive_ai, 100, 100);
+    testAiSpeed(beam_ai, 100, 100);
     return 0;
 }
