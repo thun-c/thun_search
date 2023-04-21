@@ -92,6 +92,7 @@ private:
 
 public:
     Coord character_ = Coord();
+    Coord trap_ = Coord();
     int game_score_ = 0; // ゲーム上で実際に得たスコア
     MazeState() {}
 
@@ -102,10 +103,23 @@ public:
         this->character_.y_ = mt_for_construct() % H;
         this->character_.x_ = mt_for_construct() % W;
 
+        this->trap_.y_ = mt_for_construct() % H;
+        this->trap_.x_ = mt_for_construct() % W;
+
+        while (character_.y_ == trap_.y_ && character_.x_ == trap_.x_)
+        {
+            this->trap_.y_ = mt_for_construct() % H;
+            this->trap_.x_ = mt_for_construct() % W;
+        }
+
         for (int y = 0; y < H; y++)
             for (int x = 0; x < W; x++)
             {
                 if (y == character_.y_ && x == character_.x_)
+                {
+                    continue;
+                }
+                if (y == trap_.y_ && x == trap_.x_)
                 {
                     continue;
                 }
@@ -122,7 +136,7 @@ public:
     // [どのゲームでも実装する] : ゲームの終了判定（合法だが悪い終わり方）
     bool is_dead() override
     {
-        return false;
+        return (character_.y_ == trap_.y_ && character_.x_ == trap_.x_);
     }
 
     // [どのゲームでも実装する] : 探索用の盤面評価をする
@@ -174,6 +188,10 @@ public:
                 {
                     ss << '@';
                 }
+                else if (this->trap_.y_ == h && this->trap_.x_ == w)
+                {
+                    ss << 'X';
+                }
                 else if (this->points_[h][w] > 0)
                 {
                     ss << points_[h][w];
@@ -200,7 +218,7 @@ public:
 // ランダムに行動を決定する
 std::vector<int> randomAction(std::shared_ptr<State> state)
 {
-    while (!state->is_done())
+    while (!state->is_done() && !state->is_dead())
     {
         auto legal_actions = state->legal_actions();
         int action = legal_actions[mt_for_action() % (legal_actions.size())];
@@ -306,15 +324,10 @@ int main()
     //     DUMP(p->last_action_);
     //     p = p->parent_;
     // }
-    auto state = std::shared_ptr<State>(new MazeState(0));
-    // auto actions = randomAction(a);
+    auto state = std::shared_ptr<State>(new MazeState(4));
+    // auto actions = randomAction(state);
     auto actions = beamSearchAction(state, 20);
     // cerr << "end-------" << endl;
-    // for (auto action : actions)
-    // {
-    //     DUMP(action)
-    // }
-
     show_game(state, actions);
 
     return 0;
