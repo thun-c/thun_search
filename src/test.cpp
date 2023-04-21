@@ -58,6 +58,8 @@ public:
     // インスタンスをコピーする。
     virtual std::shared_ptr<State> clone() = 0;
 
+    virtual std::string __str__() = 0;
+
     std::shared_ptr<State> cloneAdvanced(int action)
     {
         auto clone = this->clone();
@@ -159,7 +161,7 @@ public:
     }
 
     // [実装しなくてもよいが実装すると便利] : 現在のゲーム状況を文字列にする
-    std::string toString()
+    std::string __str__()
     {
         std::stringstream ss;
         ss << "turn:\t" << this->turn_ << "\n";
@@ -270,20 +272,22 @@ std::vector<int> beamSearchAction(std::shared_ptr<State> state, const int beam_w
     return actions;
 }
 
-// // シードを指定してゲーム状況を表示しながらAIにプレイさせる。
-// void playGame(const int seed)
-// {
-//     using std::cout;
-//     using std::endl;
-
-//     auto state = MazeState(seed);
-//     cout << state.toString() << endl;
-//     while (!state.is_done())
-//     {
-//         state.advance(randomAction(&state));
-//         cout << state.toString() << endl;
-//     }
-// }
+// シードを指定してゲーム状況を表示しながらAIにプレイさせる。
+void show_game(std::shared_ptr<State> state, const std::vector<int> &actions)
+{
+    using std::cout;
+    using std::endl;
+    std::string line = "######################################";
+    cout << line << endl;
+    cout << state->__str__() << endl;
+    for (const auto &action : actions)
+    {
+        state->advance(action);
+        cout << line << endl;
+        cout << state->__str__() << endl;
+    }
+    cout << line << endl;
+}
 int main()
 {
     using namespace std;
@@ -302,13 +306,16 @@ int main()
     //     DUMP(p->last_action_);
     //     p = p->parent_;
     // }
-    auto a = std::shared_ptr<State>(new MazeState(0));
+    auto state = std::shared_ptr<State>(new MazeState(0));
     // auto actions = randomAction(a);
-    auto actions = beamSearchAction(a, 20);
-    cerr << "end-------" << endl;
-    for (auto action : actions)
-    {
-        DUMP(action)
-    }
+    auto actions = beamSearchAction(state, 20);
+    // cerr << "end-------" << endl;
+    // for (auto action : actions)
+    // {
+    //     DUMP(action)
+    // }
+
+    show_game(state, actions);
+
     return 0;
 }
