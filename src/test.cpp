@@ -236,7 +236,7 @@ std::vector<int> randomAction(std::shared_ptr<State> state)
 }
 
 // ビーム幅と深さを指定してビームサーチで行動を決定する
-std::vector<int> beamSearchAction(std::shared_ptr<State> state, const int beam_width)
+std::vector<int> beamSearchAction_naive(std::shared_ptr<State> state, const int beam_width)
 {
     std::priority_queue<std::shared_ptr<State>> now_beam;
     std::shared_ptr<State> best_state;
@@ -290,6 +290,77 @@ std::vector<int> beamSearchAction(std::shared_ptr<State> state, const int beam_w
     return actions;
 }
 
+// ビーム幅と深さを指定してビームサーチで行動を決定する
+std::vector<int> beamSearchAction(std::shared_ptr<State> state, const int beam_width)
+{
+    using StatePtr = std::shared_ptr<State>;
+    std::priority_queue<StatePtr, std::vector<StatePtr>, std::greater<StatePtr>> now_beam;
+    std::shared_ptr<State> best_state = nullptr;
+
+    now_beam.emplace(state);
+    for (int t = 0;; t++)
+    {
+        std::priority_queue<StatePtr, std::vector<StatePtr>, std::greater<StatePtr>> next_beam;
+
+        for (int i = 0; i < beam_width; i++)
+        {
+            if (now_beam.empty())
+                break;
+            std::shared_ptr<State> now_state = now_beam.top();
+
+            now_beam.pop();
+            auto legal_actions = now_state->legal_actions();
+            for (const auto &action : legal_actions)
+            {
+                auto next_state = now_state->cloneAdvanced(action);
+                if (next_state->is_dead())
+                {
+                    continue;
+                }
+
+                if (next_beam.size() >= beam_width && next_beam.top()->evaluated_score_ >= next_state->evaluated_score_)
+                {
+                    continue;
+                }
+
+                next_state->evaluate_score();
+                next_state->last_action_ = action;
+                assert(next_state->parent_ != nullptr);
+
+                if (next_state->is_done())
+                {
+                    if (best_state == nullptr || next_state > best_state)
+                    {
+                        best_state = next_state;
+                    }
+                    continue;
+                }
+
+                next_beam.emplace(next_state);
+                if (next_beam.size() > beam_width)
+                {
+                    next_beam.pop();
+                }
+            }
+        }
+
+        if (best_state != nullptr)
+        {
+            break;
+        }
+        now_beam = next_beam;
+    }
+
+    std::vector<int> actions{};
+    while (best_state->parent_ != nullptr)
+    {
+        actions.emplace_back(best_state->last_action_);
+        best_state = best_state->parent_;
+    }
+    std::reverse(actions.begin(), actions.end());
+    return actions;
+}
+
 // シードを指定してゲーム状況を表示しながらAIにプレイさせる。
 void show_game(std::shared_ptr<State> state, const std::vector<int> &actions)
 {
@@ -327,6 +398,7 @@ int main()
     auto state = std::shared_ptr<State>(new MazeState(4));
     // auto actions = randomAction(state);
     auto actions = beamSearchAction(state, 20);
+    // auto actions = beamSearchAction_naive(state, 20);
     // cerr << "end-------" << endl;
     show_game(state, actions);
 
