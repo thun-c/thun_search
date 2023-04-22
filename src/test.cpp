@@ -23,9 +23,9 @@ std::mt19937 mt_for_action(0);                // 行動選択用の乱数生成�
 using ScoreType = int64_t;                    // ゲームの評価スコアの型を決めておく。
 constexpr const ScoreType INF = 1000000000LL; // あり得ないぐらい大きなスコアの例を用意しておく
 
-constexpr const int H = 3;  // 迷路の高さ
-constexpr const int W = 4;  // 迷路の幅
-constexpr int END_TURN = 4; // ゲーム終了ターン
+constexpr const int H = 4;    // 迷路の高さ
+constexpr const int W = 4;    // 迷路の幅
+constexpr int END_TURN = 400; // ゲーム終了ターン
 
 class State : public std::enable_shared_from_this<State>
 {
@@ -223,7 +223,6 @@ std::vector<int> randomAction(std::shared_ptr<State> state)
     {
         auto legal_actions = state->legal_actions();
         int action = legal_actions[mt_for_action() % (legal_actions.size())];
-        DUMP(action);
         state = state->cloneAdvanced(action);
     }
     std::vector<int> actions{};
@@ -379,25 +378,38 @@ void show_game(std::shared_ptr<State> state, const std::vector<int> &actions)
 using AIFunction = std::function<std::vector<int>(std::shared_ptr<State>)>;
 using StringAIPair = std::pair<std::string, AIFunction>;
 
-void testAiSpeed(const StringAIPair &ai, const int game_number, const int per_game_number)
+void testAiPerformance(const StringAIPair &ai, const int game_number, const int per_game_number)
 {
     using std::cout;
     using std::endl;
     std::mt19937 mt_for_construct(0);
     std::chrono::high_resolution_clock::time_point diff_sum;
+    double score_sum = 0;
     for (int i = 0; i < game_number; i++)
     {
         auto state = std::make_shared<MazeState>(i);
         auto start_time = std::chrono::high_resolution_clock::now();
+        std::vector<int> actions;
         for (int j = 0; j < per_game_number; j++)
         {
-            ai.second(state);
+            auto tmp_actions = ai.second(state);
+            if (j == 0)
+            {
+                actions = tmp_actions;
+            }
         }
         auto diff = std::chrono::high_resolution_clock::now() - start_time;
         diff_sum += diff;
+        for (const auto &action : actions)
+        {
+            state->advance(action);
+            state->evaluate_score();
+        }
+        score_sum += state->evaluated_score_;
     }
     double time_mean = std::chrono::duration_cast<std::chrono::milliseconds>(diff_sum.time_since_epoch()).count() / (double)(game_number);
-    cout << "Time of " << ai.first << ":\t" << time_mean << "ms" << endl;
+    double score_mean = score_sum / (double)game_number;
+    cout << ai.first << "score:\t" << score_mean << "\ttime:\t" << time_mean << "ms" << endl;
 }
 
 int main()
@@ -418,19 +430,24 @@ int main()
     //     DUMP(p->last_action_);
     //     p = p->parent_;
     // }
-    auto state = std::shared_ptr<State>(new MazeState(4));
+    auto state = std::make_shared<MazeState>(4);
     // auto actions = randomAction(state);
     auto actions = beamSearchAction(state, 20);
 
     int beam_width = 20;
+    const auto &random_ai = StringAIPair("randomAction", [&](std::shared_ptr<State> state)
+                                         { return randomAction(state); });
     const auto &beam_naive_ai = StringAIPair("beamSearchAction_naive", [&](std::shared_ptr<State> state)
                                              { return beamSearchAction_naive(state, beam_width); });
     const auto &beam_ai = StringAIPair("beamSearchAction", [&](std::shared_ptr<State> state)
                                        { return beamSearchAction(state, beam_width); });
     // auto actions = beamSearchAction_naive(state, 20);
     // cerr << "end-------" << endl;
-    show_game(state, actions);
-    testAiSpeed(beam_naive_ai, 100, 100);
-    testAiSpeed(beam_ai, 100, 100);
+    // show_game(state, actions);
+    int game_nuumber = 100;
+    int per_game_nuumber = 1;
+    testAiPerformance(random_ai, game_nuumber, per_game_nuumber);
+    testAiPerformance(beam_naive_ai, game_nuumber, per_game_nuumber);
+    testAiPerformance(beam_ai, game_nuumber, per_game_nuumber);
     return 0;
 }
