@@ -475,7 +475,7 @@ int main()
     // }
     // auto actions = randomAction(state);
 
-    int beam_width = 20;
+    int beam_width = 25;
     const auto &random_ai = StringAIPair("randomAction", [&](std::shared_ptr<State> state)
                                          { return randomAction(state); });
     const auto &beam_naive_ai = StringAIPair("beamSearchAction_naive", [&](std::shared_ptr<State> state)
