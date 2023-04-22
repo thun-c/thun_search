@@ -23,9 +23,9 @@ std::mt19937 mt_for_action(0);                // 行動選択用の乱数生成�
 using ScoreType = int64_t;                    // ゲームの評価スコアの型を決めておく。
 constexpr const ScoreType INF = 1000000000LL; // あり得ないぐらい大きなスコアの例を用意しておく
 
-constexpr const int H = 4;    // 迷路の高さ
-constexpr const int W = 4;    // 迷路の幅
-constexpr int END_TURN = 400; // ゲーム終了ターン
+constexpr const int H = 5;  // 迷路の高さ
+constexpr const int W = 4;  // 迷路の幅
+constexpr int END_TURN = 5; // ゲーム終了ターン
 
 class State : public std::enable_shared_from_this<State>
 {
@@ -360,8 +360,9 @@ std::vector<int> beamSearchAction(std::shared_ptr<State> state, const int beam_w
 }
 
 // シードを指定してゲーム状況を表示しながらAIにプレイさせる。
-void show_game(std::shared_ptr<State> state, const std::vector<int> &actions)
+void show_game(std::shared_ptr<State> org_state, const std::vector<int> &actions)
 {
+    auto state = org_state->clone();
     using std::cout;
     using std::endl;
     std::string line = "######################################";
@@ -375,14 +376,56 @@ void show_game(std::shared_ptr<State> state, const std::vector<int> &actions)
     }
     cout << line << endl;
 }
+
 using AIFunction = std::function<std::vector<int>(std::shared_ptr<State>)>;
 using StringAIPair = std::pair<std::string, AIFunction>;
+
+void play_game(std::shared_ptr<State> state, StringAIPair ai)
+{
+    cout << "play_game start" << endl;
+    auto actions = ai.second(state);
+    using std::cout;
+    using std::endl;
+    cout << ai.first << endl;
+    show_game(state, actions);
+    cout << "play_game end" << endl;
+}
+
+double getAiScore(const AIFunction &ai, const int seed)
+{
+    auto state = std::make_shared<MazeState>(seed);
+    std::vector<int> actions = ai(state);
+    for (const auto &action : actions)
+    {
+        state->advance(action);
+        state->evaluate_score();
+    }
+    return state->evaluated_score_;
+}
+
+int differentSeed(const StringAIPair &ai0, const StringAIPair &ai1, const int game_number)
+{
+    using std::cout;
+    using std::endl;
+    std::chrono::high_resolution_clock::time_point diff_sum;
+    double score_sum = 0;
+    for (int i = 0; i < game_number || game_number <= 0; i++)
+    {
+        auto score0 = getAiScore(ai0.second, i);
+        auto score1 = getAiScore(ai1.second, i);
+        if (score0 != score1)
+        {
+            cout << "seed " << i << ":" << ai0.first << ": " << score0 << " " << ai1.first << ": " << score1 << endl;
+            return i;
+        }
+    }
+    return -1;
+}
 
 void testAiPerformance(const StringAIPair &ai, const int game_number, const int per_game_number)
 {
     using std::cout;
     using std::endl;
-    std::mt19937 mt_for_construct(0);
     std::chrono::high_resolution_clock::time_point diff_sum;
     double score_sum = 0;
     for (int i = 0; i < game_number; i++)
@@ -430,9 +473,7 @@ int main()
     //     DUMP(p->last_action_);
     //     p = p->parent_;
     // }
-    auto state = std::make_shared<MazeState>(4);
     // auto actions = randomAction(state);
-    auto actions = beamSearchAction(state, 20);
 
     int beam_width = 20;
     const auto &random_ai = StringAIPair("randomAction", [&](std::shared_ptr<State> state)
@@ -449,5 +490,12 @@ int main()
     testAiPerformance(random_ai, game_nuumber, per_game_nuumber);
     testAiPerformance(beam_naive_ai, game_nuumber, per_game_nuumber);
     testAiPerformance(beam_ai, game_nuumber, per_game_nuumber);
+    int differnt_seed = differentSeed(beam_naive_ai, beam_ai, 100);
+    if (differnt_seed >= 0)
+    {
+        auto state = std::make_shared<MazeState>(differnt_seed);
+        play_game(state, beam_naive_ai);
+        play_game(state, beam_ai);
+    }
     return 0;
 }
