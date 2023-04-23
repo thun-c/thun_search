@@ -264,7 +264,6 @@ std::vector<int> beamSearchAction_naive(std::shared_ptr<State> state, const int 
                     continue;
                 }
                 next_state->evaluate_score();
-                next_state->last_action_ = action;
                 assert(next_state->parent_ != nullptr);
                 next_beam.push(next_state);
             }
@@ -322,7 +321,6 @@ std::vector<int> beamSearchAction(std::shared_ptr<State> state, const int beam_w
                 }
 
                 next_state->evaluate_score();
-                next_state->last_action_ = action;
                 assert(next_state->parent_ != nullptr);
 
                 if (next_state->is_done())
@@ -347,6 +345,70 @@ std::vector<int> beamSearchAction(std::shared_ptr<State> state, const int beam_w
             break;
         }
         now_beam = next_beam;
+    }
+
+    std::vector<int> actions{};
+    while (best_state->parent_ != nullptr)
+    {
+        actions.emplace_back(best_state->last_action_);
+        best_state = best_state->parent_;
+    }
+    std::reverse(actions.begin(), actions.end());
+    return actions;
+}
+
+// ビーム幅と深さを指定してビームサーチで行動を決定する
+std::vector<int> beamSearchActionByNthElement(std::shared_ptr<State> state, const int beam_width)
+{
+    using StatePtr = std::shared_ptr<State>;
+    std::vector<StatePtr> now_beam; // priority_queueからvectorに変更
+
+    now_beam.emplace_back(state);
+    for (int t = 0;; t++)
+    {
+        std::vector<StatePtr> next_beam; // priority_queueからvectorに変更
+
+        // 常にnow_beam.size()<=beam_widthになるように後続の処理で調整し、
+        // 拡張for文でnow_stateを取り出す
+        for (StatePtr now_state : now_beam)
+        {
+            auto legal_actions = now_state->legal_actions();
+            for (const auto &action : legal_actions)
+            {
+                StatePtr next_state = now_state->cloneAdvanced(action);
+                if (next_state->is_dead())
+                {
+                    continue;
+                }
+                next_state->evaluate_score();
+                next_beam.emplace_back(next_state);
+            }
+        }
+
+        // ビーム幅分だけ上位のデータを残す処理をする。
+        if (next_beam.size() > beam_width)
+        {
+            // ビーム幅分だけ上位のデータを先頭に寄せる
+            std::nth_element(next_beam.begin(), next_beam.begin() + beam_width, next_beam.end(), std::greater<>());
+            // ビーム幅分だけデータを切り取る
+            next_beam.resize(beam_width);
+        }
+        now_beam = next_beam;
+
+        if (now_beam[0]->is_done())
+        {
+            break;
+        }
+    }
+    StatePtr best_state = nullptr;
+    // 最も良いstateを取り出す。
+    // nth_elementで処理した場合、0番目が最大であることが保証されない。
+    for (StatePtr now_state : now_beam)
+    {
+        if (best_state == nullptr || now_state->evaluated_score_ > best_state->evaluated_score_)
+        {
+            best_state = now_state;
+        }
     }
 
     std::vector<int> actions{};
@@ -452,7 +514,12 @@ void testAiPerformance(const StringAIPair &ai, const int game_number, const int 
     }
     double time_mean = std::chrono::duration_cast<std::chrono::milliseconds>(diff_sum.time_since_epoch()).count() / (double)(game_number);
     double score_mean = score_sum / (double)game_number;
-    cout << ai.first << "score:\t" << score_mean << "\ttime:\t" << time_mean << "ms" << endl;
+    std::string ai_name = "                             ";
+    for (int i = 0; i < std::min(ai_name.size(), ai.first.size()); i++)
+    {
+        ai_name[i] = ai.first[i];
+    }
+    cout << ai_name << "\tscore: " << score_mean << "\ttime: " << time_mean << "ms" << endl;
 }
 
 int main()
@@ -482,6 +549,8 @@ int main()
                                              { return beamSearchAction_naive(state, beam_width); });
     const auto &beam_ai = StringAIPair("beamSearchAction", [&](std::shared_ptr<State> state)
                                        { return beamSearchAction(state, beam_width); });
+    const auto &beam_nth_ai = StringAIPair("beamSearchActionByNthElement", [&](std::shared_ptr<State> state)
+                                           { return beamSearchActionByNthElement(state, beam_width); });
     // auto actions = beamSearchAction_naive(state, 20);
     // cerr << "end-------" << endl;
     // show_game(state, actions);
@@ -490,13 +559,14 @@ int main()
     testAiPerformance(random_ai, game_nuumber, per_game_nuumber);
     testAiPerformance(beam_naive_ai, game_nuumber, per_game_nuumber);
     testAiPerformance(beam_ai, game_nuumber, per_game_nuumber);
-    int differnt_seed = differentSeed(beam_naive_ai, beam_ai, 100);
-    if (differnt_seed >= 0)
-    {
-        auto state = std::make_shared<MazeState>(differnt_seed);
-        play_game(state, beam_naive_ai);
-        play_game(state, beam_ai);
-    }
+    testAiPerformance(beam_nth_ai, game_nuumber, per_game_nuumber);
+    // int differnt_seed = differentSeed(beam_naive_ai, beam_ai, 100);
+    // if (differnt_seed >= 0)
+    // {
+    //     auto state = std::make_shared<MazeState>(differnt_seed);
+    //     play_game(state, beam_naive_ai);
+    //     play_game(state, beam_ai);
+    // }
     // H 5
     // W 4
     // seed 12
