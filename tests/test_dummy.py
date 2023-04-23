@@ -1,6 +1,7 @@
 import sys
 import random
 from copy import deepcopy
+import time
 # import thunsearch._thunsearch as thun
 import thunsearch as thun
 from abc import abstractmethod
@@ -176,6 +177,29 @@ class MazeState(BaseState):
         return ss
 
 
+def test_ai_performance(name_ai, game_number, per_game_number):
+    name, ai = name_ai
+    diff_sum = 0
+    score_sum = 0
+    for i in range(game_number):
+        state = MazeState(i)
+        start_time = time.time()
+        actions = None
+        for j in range(per_game_number):
+            tmp_actions = ai(state)
+            if j == 0:
+                actions = tmp_actions
+        diff = time.time()-start_time
+        diff_sum += diff
+        for action in actions:
+            state.advance(action)
+            state.evaluate_score()
+        score_sum += state.game_score_
+    time_mean = diff_sum*1000//game_number
+    score_mean = round(score_sum/game_number, 2)
+    print(f"\"{name}\" score:{score_mean}\ttime:{time_mean}")
+
+
 if __name__ == "__main__":
     print("thun.__version__", thun.__version__)
     # print([key for key in thun.__dict__.keys() if "__" != key[:2]])
@@ -188,11 +212,22 @@ if __name__ == "__main__":
     # print("state", [
     #       key for key in state.__dict__.keys() if True or "__" != key[:2]])
 
-    state = MazeState(2)
+    state = MazeState(0)
     # print("state\n###########\n", state)
     # state2 = state.cloneAdvanced(1)
     # print("state2\n###########\n", state2)
     # print("state\n###########\n", state)
     # print(thun.randomAction(state))
     # play_game(state, thun.randomAction)
-    play_game(state, beam_py_function(2))
+    # play_game(state, beam_py_function(beam_width=100))
+    game_number = 10
+    per_game_number = 10
+    numbers = game_number, per_game_number
+
+    def get_name_beam(beamwidth):
+        return (f"beam {beamwidth}", beam_py_function(beam_width=beamwidth))
+    test_ai_performance(get_name_beam(2), *numbers)
+    test_ai_performance(get_name_beam(4), *numbers)
+    test_ai_performance(get_name_beam(8), *numbers)
+    test_ai_performance(get_name_beam(16), *numbers)
+    test_ai_performance(get_name_beam(32), *numbers)

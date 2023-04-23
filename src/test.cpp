@@ -24,9 +24,9 @@ std::mt19937 mt_for_action(0);                // 行動選択用の乱数生成�
 using ScoreType = int64_t;                    // ゲームの評価スコアの型を決めておく。
 constexpr const ScoreType INF = 1000000000LL; // あり得ないぐらい大きなスコアの例を用意しておく
 
-constexpr const int H = 50;    // 迷路の高さ
-constexpr const int W = 40;    // 迷路の幅
-constexpr int END_TURN = 1000; // ゲーム終了ターン
+constexpr const int H = 3;  // 迷路の高さ
+constexpr const int W = 4;  // 迷路の幅
+constexpr int END_TURN = 4; // ゲーム終了ターン
 
 class State : public std::enable_shared_from_this<State>
 {
@@ -307,6 +307,7 @@ std::vector<int> beamSearchAction(std::shared_ptr<State> state, const int beam_w
             if (now_beam.empty())
                 break;
             std::shared_ptr<State> now_state = now_beam.top();
+            cout << "t " << t << "\tnow_score:" << now_state->evaluated_score_ << endl;
 
             now_beam.pop();
             auto legal_actions = now_state->legal_actions();
@@ -317,13 +318,13 @@ std::vector<int> beamSearchAction(std::shared_ptr<State> state, const int beam_w
                 {
                     continue;
                 }
+                next_state->evaluate_score();
 
                 if (next_beam.size() >= beam_width && next_beam.top()->evaluated_score_ >= next_state->evaluated_score_)
                 {
                     continue;
                 }
 
-                next_state->evaluate_score();
                 assert(next_state->parent_ != nullptr);
 
                 if (next_state->is_done())
@@ -681,7 +682,7 @@ int main()
     // }
     // auto actions = randomAction(state);
 
-    int beam_width = 200;
+    int beam_width = 2;
     int thread_n = 6;
     const auto &random_ai = StringAIPair("randomAction", [&](std::shared_ptr<State> state)
                                          { return randomAction(state); });
@@ -693,16 +694,17 @@ int main()
                                            { return beamSearchActionByNthElement(state, beam_width); });
     const auto &beam_mp_ai = StringAIPair("beamSearchActionMp " + std::to_string(thread_n), [&](std::shared_ptr<State> state)
                                           { return beamSearchActionMp(state, beam_width, thread_n); });
-    // auto actions = beamSearchAction_naive(state, 20);
+    auto state = std::make_shared<MazeState>(1);
+    auto actions = beam_ai.second(state);
     // cerr << "end-------" << endl;
-    // show_game(state, actions);
+    show_game(state, actions);
     int game_nuumber = 1;
     int per_game_nuumber = 1;
     // testAiPerformance(random_ai, game_nuumber, per_game_nuumber);
-    testAiPerformance(beam_naive_ai, game_nuumber, per_game_nuumber);
-    testAiPerformance(beam_ai, game_nuumber, per_game_nuumber);
+    // testAiPerformance(beam_naive_ai, game_nuumber, per_game_nuumber);
+    // testAiPerformance(beam_ai, game_nuumber, per_game_nuumber);
     // testAiPerformance(beam_nth_ai, game_nuumber, per_game_nuumber);
-    testAiPerformance(beam_mp_ai, game_nuumber, per_game_nuumber);
+    // testAiPerformance(beam_mp_ai, game_nuumber, per_game_nuumber);
     // int differnt_seed = differentSeed(beam_naive_ai, beam_ai, 100);
     // if (differnt_seed >= 0)
     // {

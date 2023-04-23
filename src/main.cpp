@@ -33,7 +33,7 @@ public:
     // 探索用の盤面評価をする
     virtual void evaluate_score() = 0;
 
-    virtual void setEvaluateScore(double evaluated_score)
+    void setEvaluateScore(double evaluated_score)
     {
         this->evaluated_score_ = evaluated_score;
     }
@@ -48,6 +48,16 @@ public:
         return clone;
     }
 };
+
+// 探索時のソート用に評価を比較する
+bool operator<(const State &state_1, const State &state_2)
+{
+    return state_1.evaluated_score_ < state_2.evaluated_score_;
+}
+bool operator<(const std::shared_ptr<State> &state_1, const std::shared_ptr<State> &state_2)
+{
+    return state_1->evaluated_score_ < state_2->evaluated_score_;
+}
 
 class PyState : public State
 {
@@ -91,10 +101,6 @@ public:
     {
         PYBIND11_OVERRIDE_PURE(/* Return type */ void, /* Parent class */ State, /* Name of function */ evaluate_score);
     }
-    void setEvaluateScore(double evaluated_score) override
-    {
-        PYBIND11_OVERRIDE(/* Return type */ void, /* Parent class */ State, /* Name of function */ setEvaluateScore, /* args */ evaluated_score);
-    }
 };
 
 // ランダムに行動を決定する
@@ -135,6 +141,7 @@ std::vector<int> beamSearchAction(std::shared_ptr<State> state, const int beam_w
             if (now_beam.empty())
                 break;
             std::shared_ptr<State> now_state = now_beam.top();
+            // cout << "t " << t << "\tnow_score:" << now_state->evaluated_score_ << endl;
 
             now_beam.pop();
             auto legal_actions = now_state->_legal_actions();
@@ -145,13 +152,13 @@ std::vector<int> beamSearchAction(std::shared_ptr<State> state, const int beam_w
                 {
                     continue;
                 }
+                next_state->evaluate_score();
 
                 if (next_beam.size() >= beam_width && next_beam.top()->evaluated_score_ >= next_state->evaluated_score_)
                 {
                     continue;
                 }
 
-                next_state->evaluate_score();
                 assert(next_state->parent_ != nullptr);
 
                 if (next_state->is_done())
@@ -163,6 +170,7 @@ std::vector<int> beamSearchAction(std::shared_ptr<State> state, const int beam_w
                     continue;
                 }
 
+                // cout << "next_state " << next_state->evaluated_score_ << endl;
                 next_beam.emplace(next_state);
                 if (next_beam.size() > beam_width)
                 {
