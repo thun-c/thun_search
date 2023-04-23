@@ -8,6 +8,7 @@
 #include <algorithm>
 #include <assert.h>
 #include <chrono>
+#include <thread>
 using std::cerr;
 using std::cout;
 using std::endl;
@@ -429,13 +430,14 @@ std::vector<int> beamSearchActionMp(std::shared_ptr<State> state, const int beam
     std::vector<std::vector<StatePtr>> next_beams(thread_n);
     now_beams[0].emplace_back(state);
     std::vector<StatePtr> now_beam;
+
     for (int t = 0;; t++)
     {
-
-        // 常にnow_beam.size()<=beam_widthになるように後続の処理で調整し、
-        // 拡張for文でnow_stateを取り出す
+        std::vector<std::thread> thds;
         for (int k = 0; k < thread_n; k++)
         {
+            thds.emplace_back([&, k]
+                              {
             auto &per_next_beam = next_beams[k];
             per_next_beam.clear();
 
@@ -462,8 +464,46 @@ std::vector<int> beamSearchActionMp(std::shared_ptr<State> state, const int beam
                 std::nth_element(per_next_beam.begin(), per_next_beam.begin() + beam_width, per_next_beam.end(), std::greater<>());
                 // ビーム幅分だけデータを切り取る
                 per_next_beam.resize(beam_width);
-            }
+            } });
         }
+
+        // 常にnow_beam.size()<=beam_widthになるように後続の処理で調整し、
+        // 拡張for文でnow_stateを取り出す
+        // for (int k = 0; k < thread_n; k++)
+        // {
+        //     auto &per_next_beam = next_beams[k];
+        //     per_next_beam.clear();
+
+        //     auto &per_beam = now_beams[k];
+        //     for (StatePtr now_state : per_beam)
+        //     {
+        //         auto legal_actions = now_state->legal_actions();
+        //         for (const auto &action : legal_actions)
+        //         {
+        //             StatePtr next_state = now_state->cloneAdvanced(action);
+        //             if (next_state->is_dead())
+        //             {
+        //                 continue;
+        //             }
+        //             next_state->evaluate_score();
+        //             per_next_beam.emplace_back(next_state);
+        //         }
+        //     }
+
+        //     // ビーム幅分だけ上位のデータを残す処理をする。
+        //     if (per_next_beam.size() > beam_width)
+        //     {
+        //         // ビーム幅分だけ上位のデータを先頭に寄せる
+        //         std::nth_element(per_next_beam.begin(), per_next_beam.begin() + beam_width, per_next_beam.end(), std::greater<>());
+        //         // ビーム幅分だけデータを切り取る
+        //         per_next_beam.resize(beam_width);
+        //     }
+        // }
+        for (auto &t : thds)
+        {
+            t.join();
+        }
+
         now_beam.clear();
         for (int k = 0; k < thread_n; k++)
         {
@@ -640,6 +680,7 @@ int main()
     // auto actions = randomAction(state);
 
     int beam_width = 25;
+    int thread_n = 8;
     const auto &random_ai = StringAIPair("randomAction", [&](std::shared_ptr<State> state)
                                          { return randomAction(state); });
     const auto &beam_naive_ai = StringAIPair("beamSearchAction_naive", [&](std::shared_ptr<State> state)
@@ -648,8 +689,8 @@ int main()
                                        { return beamSearchAction(state, beam_width); });
     const auto &beam_nth_ai = StringAIPair("beamSearchActionByNthElement", [&](std::shared_ptr<State> state)
                                            { return beamSearchActionByNthElement(state, beam_width); });
-    const auto &beam_mp_ai = StringAIPair("beamSearchActionMp", [&](std::shared_ptr<State> state)
-                                          { return beamSearchActionMp(state, beam_width, 4); });
+    const auto &beam_mp_ai = StringAIPair("beamSearchActionMp " + std::to_string(thread_n), [&](std::shared_ptr<State> state)
+                                          { return beamSearchActionMp(state, beam_width, thread_n); });
     // auto actions = beamSearchAction_naive(state, 20);
     // cerr << "end-------" << endl;
     // show_game(state, actions);
