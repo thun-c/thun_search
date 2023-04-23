@@ -421,6 +421,103 @@ std::vector<int> beamSearchActionByNthElement(std::shared_ptr<State> state, cons
     return actions;
 }
 
+// ビーム幅と深さを指定してビームサーチで行動を決定する
+std::vector<int> beamSearchActionMp(std::shared_ptr<State> state, const int beam_width, const int thread_n)
+{
+    using StatePtr = std::shared_ptr<State>;
+    std::vector<std::vector<StatePtr>> now_beams(thread_n);
+    std::vector<std::vector<StatePtr>> next_beams(thread_n);
+    now_beams[0].emplace_back(state);
+    std::vector<StatePtr> now_beam;
+    for (int t = 0;; t++)
+    {
+
+        // 常にnow_beam.size()<=beam_widthになるように後続の処理で調整し、
+        // 拡張for文でnow_stateを取り出す
+        for (int k = 0; k < thread_n; k++)
+        {
+            auto &per_next_beam = next_beams[k];
+            per_next_beam.clear();
+
+            auto &per_beam = now_beams[k];
+            for (StatePtr now_state : per_beam)
+            {
+                auto legal_actions = now_state->legal_actions();
+                for (const auto &action : legal_actions)
+                {
+                    StatePtr next_state = now_state->cloneAdvanced(action);
+                    if (next_state->is_dead())
+                    {
+                        continue;
+                    }
+                    next_state->evaluate_score();
+                    per_next_beam.emplace_back(next_state);
+                }
+            }
+
+            // ビーム幅分だけ上位のデータを残す処理をする。
+            if (per_next_beam.size() > beam_width)
+            {
+                // ビーム幅分だけ上位のデータを先頭に寄せる
+                std::nth_element(per_next_beam.begin(), per_next_beam.begin() + beam_width, per_next_beam.end(), std::greater<>());
+                // ビーム幅分だけデータを切り取る
+                per_next_beam.resize(beam_width);
+            }
+        }
+        now_beam.clear();
+        for (int k = 0; k < thread_n; k++)
+        {
+            for (auto tmp_state : next_beams[k])
+            {
+                now_beam.emplace_back(tmp_state);
+            }
+        }
+        // ビーム幅分だけ上位のデータを残す処理をする。
+        if (now_beam.size() > beam_width)
+        {
+            // ビーム幅分だけ上位のデータを先頭に寄せる
+            std::nth_element(now_beam.begin(), now_beam.begin() + beam_width, now_beam.end(), std::greater<>());
+            // ビーム幅分だけデータを切り取る
+            now_beam.resize(beam_width);
+        }
+
+        if (now_beam[0]->is_done())
+        {
+            break;
+        }
+
+        for (int k = 0; k < thread_n; k++)
+        {
+            now_beams[k].clear();
+        }
+
+        for (int j = 0; j < now_beam.size(); j++)
+        {
+            int k = j % thread_n;
+            now_beams[k].emplace_back(now_beam[j]);
+        }
+    }
+    StatePtr best_state = nullptr;
+    // 最も良いstateを取り出す。
+    // nth_elementで処理した場合、0番目が最大であることが保証されない。
+    for (StatePtr now_state : now_beam)
+    {
+        if (best_state == nullptr || now_state->evaluated_score_ > best_state->evaluated_score_)
+        {
+            best_state = now_state;
+        }
+    }
+
+    std::vector<int> actions{};
+    while (best_state->parent_ != nullptr)
+    {
+        actions.emplace_back(best_state->last_action_);
+        best_state = best_state->parent_;
+    }
+    std::reverse(actions.begin(), actions.end());
+    return actions;
+}
+
 // シードを指定してゲーム状況を表示しながらAIにプレイさせる。
 void show_game(std::shared_ptr<State> org_state, const std::vector<int> &actions)
 {
@@ -551,6 +648,8 @@ int main()
                                        { return beamSearchAction(state, beam_width); });
     const auto &beam_nth_ai = StringAIPair("beamSearchActionByNthElement", [&](std::shared_ptr<State> state)
                                            { return beamSearchActionByNthElement(state, beam_width); });
+    const auto &beam_mp_ai = StringAIPair("beamSearchActionMp", [&](std::shared_ptr<State> state)
+                                          { return beamSearchActionMp(state, beam_width, 4); });
     // auto actions = beamSearchAction_naive(state, 20);
     // cerr << "end-------" << endl;
     // show_game(state, actions);
@@ -560,6 +659,7 @@ int main()
     testAiPerformance(beam_naive_ai, game_nuumber, per_game_nuumber);
     testAiPerformance(beam_ai, game_nuumber, per_game_nuumber);
     testAiPerformance(beam_nth_ai, game_nuumber, per_game_nuumber);
+    testAiPerformance(beam_mp_ai, game_nuumber, per_game_nuumber);
     // int differnt_seed = differentSeed(beam_naive_ai, beam_ai, 100);
     // if (differnt_seed >= 0)
     // {
