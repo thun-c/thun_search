@@ -24,9 +24,9 @@ std::mt19937 mt_for_action(0);                // 行動選択用の乱数生成�
 using ScoreType = int64_t;                    // ゲームの評価スコアの型を決めておく。
 constexpr const ScoreType INF = 1000000000LL; // あり得ないぐらい大きなスコアの例を用意しておく
 
-constexpr const int H = 5;  // 迷路の高さ
-constexpr const int W = 4;  // 迷路の幅
-constexpr int END_TURN = 5; // ゲーム終了ターン
+constexpr const int H = 50;    // 迷路の高さ
+constexpr const int W = 40;    // 迷路の幅
+constexpr int END_TURN = 1000; // ゲーム終了ターン
 
 class State : public std::enable_shared_from_this<State>
 {
@@ -149,6 +149,8 @@ public:
     // [どのゲームでも実装する] : 指定したactionでゲームを1ターン進める
     void advance(const int action) override
     {
+        // std::this_thread::sleep_for(std::chrono::nanoseconds(1)); //
+
         this->character_.x_ += dx[action];
         this->character_.y_ += dy[action];
         auto &point = this->points_[this->character_.y_][this->character_.x_];
@@ -679,8 +681,8 @@ int main()
     // }
     // auto actions = randomAction(state);
 
-    int beam_width = 25;
-    int thread_n = 8;
+    int beam_width = 200;
+    int thread_n = 6;
     const auto &random_ai = StringAIPair("randomAction", [&](std::shared_ptr<State> state)
                                          { return randomAction(state); });
     const auto &beam_naive_ai = StringAIPair("beamSearchAction_naive", [&](std::shared_ptr<State> state)
@@ -694,12 +696,12 @@ int main()
     // auto actions = beamSearchAction_naive(state, 20);
     // cerr << "end-------" << endl;
     // show_game(state, actions);
-    int game_nuumber = 100;
+    int game_nuumber = 1;
     int per_game_nuumber = 1;
-    testAiPerformance(random_ai, game_nuumber, per_game_nuumber);
+    // testAiPerformance(random_ai, game_nuumber, per_game_nuumber);
     testAiPerformance(beam_naive_ai, game_nuumber, per_game_nuumber);
     testAiPerformance(beam_ai, game_nuumber, per_game_nuumber);
-    testAiPerformance(beam_nth_ai, game_nuumber, per_game_nuumber);
+    // testAiPerformance(beam_nth_ai, game_nuumber, per_game_nuumber);
     testAiPerformance(beam_mp_ai, game_nuumber, per_game_nuumber);
     // int differnt_seed = differentSeed(beam_naive_ai, beam_ai, 100);
     // if (differnt_seed >= 0)
