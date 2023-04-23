@@ -20,6 +20,10 @@ def clone_child(child, instance):
     return cloned
 
 
+def beam_py_function(beam_width):
+    return lambda state: thun.beamSearchAction(state, beam_width)
+
+
 class BaseState(thun.State):
     @abstractmethod
     def advance(self, action):
@@ -36,6 +40,11 @@ class BaseState(thun.State):
 
     @abstractmethod
     def is_done(self):
+        raise NotImplementedError(
+            f"{sys._getframe().f_code.co_name} is not implemented")
+
+    @abstractmethod
+    def is_dead(self):
         raise NotImplementedError(
             f"{sys._getframe().f_code.co_name} is not implemented")
 
@@ -74,6 +83,14 @@ class Coord:
         self.x_ = x
         pass
 
+    def __eq__(self, other):
+        if not isinstance(other, Coord):
+            return NotImplemented
+        return (self.y_, self.x_) == (other.y_, other.x_)
+
+    def __ne__(self, other):
+        return not self.__eq__(other)
+
 
 class MazeState(BaseState):
     dy = [0, 0, 1, -1]  # 右、左、下、上への移動方向のy成分
@@ -90,19 +107,30 @@ class MazeState(BaseState):
         self.points_ = [[0 for w in range(MazeState.W)]
                         for h in range(MazeState.H)]
         self.character_ = Coord(0, 0)
+        self.trap_ = Coord(0, 0)
         self.game_score_ = 0
         if seed is not None:
             random.seed(seed)
             self.character_.y_ = random.randrange(MazeState.H)
             self.character_.x_ = random.randrange(MazeState.W)
+            while self.character_ == self.trap_:
+                self.trap_.y_ = random.randrange(MazeState.H)
+                self.trap_.x_ = random.randrange(MazeState.W)
+
             for y in range(MazeState.H):
                 for x in range(MazeState.W):
                     if (y, x) == (self.character_.y_, self.character_.x_):
+                        continue
+
+                    if (y, x) == (self.trap_.y_, self.trap_.x_):
                         continue
                     self.points_[y][x] = random.randrange(10)
 
     def is_done(self):
         return self.turn_ == MazeState.END_TURN
+
+    def is_dead(self):
+        return self.trap_ == self.character_
 
     def evaluate_score(self):
         super().setEvaluateScore(self.game_score_)
@@ -136,8 +164,10 @@ class MazeState(BaseState):
         ss += f"game_score_:\t{self.game_score_}\n"
         for h in range(MazeState.H):
             for w in range(MazeState.W):
-                if (self.character_.y_ == h and self.character_.x_ == w):
+                if (self.character_ == Coord(h, w)):
                     ss += "@"
+                elif (self.trap_ == Coord(h, w)):
+                    ss += "X"
                 elif self.points_[h][w] > 0:
                     ss += str(self.points_[h][w])
                 else:
@@ -158,10 +188,11 @@ if __name__ == "__main__":
     # print("state", [
     #       key for key in state.__dict__.keys() if True or "__" != key[:2]])
 
-    state = MazeState(0)
+    state = MazeState(2)
     # print("state\n###########\n", state)
     # state2 = state.cloneAdvanced(1)
     # print("state2\n###########\n", state2)
     # print("state\n###########\n", state)
     # print(thun.randomAction(state))
-    play_game(state, thun.randomAction)
+    # play_game(state, thun.randomAction)
+    play_game(state, beam_py_function(2))

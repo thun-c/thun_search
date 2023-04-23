@@ -290,7 +290,7 @@ std::vector<int> beamSearchAction_naive(std::shared_ptr<State> state, const int 
     return actions;
 }
 
-// ビーム幅と深さを指定してビームサーチで行動を決定する
+// ビーム幅を指定してビームサーチで行動を決定する
 std::vector<int> beamSearchAction(std::shared_ptr<State> state, const int beam_width)
 {
     using StatePtr = std::shared_ptr<State>;
