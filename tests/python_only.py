@@ -2,30 +2,26 @@ import sys
 import random
 from copy import deepcopy
 import time
-# import thunsearch._thunsearch as thun
-import thunsearch as thun
 from abc import abstractmethod
 from typing import List, Callable
-print("thun", [key for key in thun.__dict__.keys()])
-print("thun._thunsearch", [key for key in thun._thunsearch.__dict__.keys()])
+import heapq
 
 
 def clone_child(child, instance):
 
     cloned = child.__new__(child)
-    # clone C++ state
-    thun.State.__init__(cloned, instance)
-    # clone Python state
     cloned.__dict__ = {key: deepcopy(value)
                        for key, value in instance.__dict__.items()}
     return cloned
 
 
-def beam_py_function(beam_width):
-    return lambda state: thun.beamSearchAction(state, beam_width)
+class BaseState():
+    def __init__(self) -> None:
+        self.parent_ = None
+        self.evaluated_score_ = 0
+        self.last_action_ = -1
+        pass
 
-
-class BaseState(thun.State):
     @abstractmethod
     def advance(self, action):
         raise NotImplementedError(
@@ -36,9 +32,6 @@ class BaseState(thun.State):
         raise NotImplementedError(
             f"{sys._getframe().f_code.co_name} is not implemented")
 
-    def _legal_actions(self) -> thun.VectorInt:
-        return thun.VectorInt(self.legal_actions())
-
     @abstractmethod
     def is_done(self):
         raise NotImplementedError(
@@ -46,11 +39,6 @@ class BaseState(thun.State):
 
     @abstractmethod
     def is_dead(self):
-        raise NotImplementedError(
-            f"{sys._getframe().f_code.co_name} is not implemented")
-
-    @abstractmethod
-    def evaluate_score(self):
         raise NotImplementedError(
             f"{sys._getframe().f_code.co_name} is not implemented")
 
@@ -65,6 +53,71 @@ class BaseState(thun.State):
     def __str__(self):
         raise NotImplementedError(
             f"{sys._getframe().f_code.co_name} is not implemented")
+
+    def __lt__(self, other):
+        return self.evaluated_score_ < other.evaluated_score_
+
+    def cloneAdvanced(self, action: int):
+        cloned: BaseState = self.clone()
+        cloned.advance(action)
+        cloned.parent_ = self
+        cloned.last_action_ = action
+        return cloned
+
+    @abstractmethod
+    def evaluate_score(self):
+        raise NotImplementedError(
+            f"{sys._getframe().f_code.co_name} is not implemented")
+
+
+def beamSearchAction(state: BaseState, beam_width):
+    now_beam: List[BaseState] = []
+    best_state: BaseState = None
+    heapq.heappush(now_beam, state)
+    while True:
+        next_beam: List[BaseState] = []
+
+        for i in range(beam_width):
+            if len(now_beam) == 0:
+                break
+            now_state = now_beam[0]
+            assert (now_state is not None)
+            heapq.heappop(now_beam)
+            legal_actions = now_state.legal_actions()
+            for action in legal_actions:
+                next_state = now_state.cloneAdvanced(action)
+                if next_state.is_dead():
+                    continue
+                next_state.evaluate_score()
+
+                if (len(next_beam) >= beam_width
+                        and
+                        next_beam[0].evaluated_score_
+                        >= next_state.evaluated_score_):
+                    continue
+
+                assert (next_state.parent_ is not None)
+
+                if next_state.is_done():
+                    if best_state is None or best_state < next_state:
+                        best_state = next_state
+                    continue
+                heapq.heappush(next_beam, next_state)
+                if len(next_beam) > beam_width:
+                    heapq.heappop(next_beam)
+        if best_state is not None:
+            break
+        now_beam = next_beam
+    actions = []
+    while best_state.parent_ is not None:
+        actions.append(best_state.last_action_)
+        best_state = best_state.parent_
+    actions = actions[::-1]
+    return actions
+
+
+def beam_py_function(beam_width):
+    return lambda state: beamSearchAction(state, beam_width)
 
 
 def show_game(state: BaseState, actions: List[int]):
@@ -107,8 +160,7 @@ class MazeState(BaseState):
     INF = 1000000000
 
     def __init__(self, seed=None) -> None:
-        thun.State.__init__(self)
-        # super().__init__()
+        super().__init__()
         self.turn_ = 0
         self.points_ = [[0 for w in range(MazeState.W)]
                         for h in range(MazeState.H)]
@@ -139,7 +191,7 @@ class MazeState(BaseState):
         return self.trap_ == self.character_
 
     def evaluate_score(self):
-        super().setEvaluateScore(self.game_score_)
+        self.evaluated_score_ = self.game_score_
         return
 
     def advance(self, action):
@@ -206,28 +258,21 @@ def test_ai_performance(name_ai, game_number, per_game_number):
 
 
 if __name__ == "__main__":
-    print("thun.__version__", thun.__version__)
-    # print([key for key in thun.__dict__.keys() if "__" != key[:2]])
-    # state = MazeState(0)
-    # print("thun.State", [
-    #       key for key in thun.State.__dict__.keys() if "__" != key[:2]])
-    # print("MazeState", [
-    #       key for key in MazeState.__dict__.keys() if "__" != key[:2]])
-
-    # print("state", [
-    #       key for key in state.__dict__.keys() if True or "__" != key[:2]])
-
     state = MazeState(0)
-    # print("state\n###########\n", state)
-    # state2 = state.cloneAdvanced(1)
-    # print("state2\n###########\n", state2)
-    # print("state\n###########\n", state)
-    # print(thun.randomAction(state))
-    # play_game(state, thun.randomAction)
-    # play_game(state, beam_py_function(beam_width=100))
+
     game_number = 10
     per_game_number = 10
     numbers = game_number, per_game_number
+
+    # states: List[MazeState] = [MazeState(i) for i in range(10)]
+    # pq: List[MazeState] = []
+    # for state in states:
+    #     state.evaluated_score_ = random.randrange(4)
+    #     heapq.heappush(pq, state)
+
+    # while len(pq) > 0:
+    #     print(pq[0].evaluated_score_)
+    #     heapq.heappop(pq)
 
     def get_name_beam(beamwidth):
         return (f"beam {beamwidth}", beam_py_function(beam_width=beamwidth))
