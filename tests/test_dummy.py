@@ -4,83 +4,9 @@ from copy import deepcopy
 import time
 # import thunsearch._thunsearch as thun
 import thunsearch as thun
-from abc import abstractmethod
 from typing import List, Callable
 print("thun", [key for key in thun.__dict__.keys()])
 print("thun._thunsearch", [key for key in thun._thunsearch.__dict__.keys()])
-
-
-def clone_child(child, instance):
-
-    cloned = child.__new__(child)
-    # clone C++ state
-    thun.State.__init__(cloned, instance)
-    # clone Python state
-    cloned.__dict__ = {key: deepcopy(value)
-                       for key, value in instance.__dict__.items()}
-    return cloned
-
-
-def beam_py_function(beam_width):
-    return lambda state: thun.beamSearchAction(state, beam_width)
-
-
-class BaseState(thun.State):
-    @abstractmethod
-    def advance(self, action):
-        raise NotImplementedError(
-            f"{sys._getframe().f_code.co_name} is not implemented")
-
-    @abstractmethod
-    def legal_actions(self) -> List[int]:
-        raise NotImplementedError(
-            f"{sys._getframe().f_code.co_name} is not implemented")
-
-    def _legal_actions(self) -> thun.VectorInt:
-        return thun.VectorInt(self.legal_actions())
-
-    @abstractmethod
-    def is_done(self):
-        raise NotImplementedError(
-            f"{sys._getframe().f_code.co_name} is not implemented")
-
-    @abstractmethod
-    def is_dead(self):
-        raise NotImplementedError(
-            f"{sys._getframe().f_code.co_name} is not implemented")
-
-    @abstractmethod
-    def evaluate_score(self):
-        raise NotImplementedError(
-            f"{sys._getframe().f_code.co_name} is not implemented")
-
-    @abstractmethod
-    def clone(self):
-        raise NotImplementedError(
-            f"{sys._getframe().f_code.co_name} is not implemented.\n"
-            f"It is recommended to write "
-            f"\"return clone_child(__class__, self)\"")
-
-    @abstractmethod
-    def __str__(self):
-        raise NotImplementedError(
-            f"{sys._getframe().f_code.co_name} is not implemented")
-
-
-def show_game(state: BaseState, actions: List[int]):
-    state = state.clone()
-    line = "#"*30
-    print(line)
-    print(state)
-    for action in actions:
-        state.advance(action)
-        print(line)
-        print(state)
-    print(line)
-
-
-def play_game(state: BaseState, ai: Callable):
-    show_game(state, ai(state))
 
 
 class Coord:
@@ -98,7 +24,7 @@ class Coord:
         return not self.__eq__(other)
 
 
-class MazeState(BaseState):
+class MazeState(thun.BaseState):
     dy = [0, 0, 1, -1]  # 右、左、下、上への移動方向のy成分
     dx = [1, -1, 0, 0]  # 右、左、下、上への移動方向のx成分
     H = 3
@@ -162,7 +88,7 @@ class MazeState(BaseState):
         return actions
 
     def clone(self):
-        return clone_child(__class__, self)
+        return thun.clone_child(__class__, self)
 
     def __str__(self):
         ss = ""
@@ -230,7 +156,10 @@ if __name__ == "__main__":
     numbers = game_number, per_game_number
 
     def get_name_beam(beamwidth):
-        return (f"beam {beamwidth}", beam_py_function(beam_width=beamwidth))
+        return (
+            f"beam {beamwidth}",
+            thun.beam_py_function(beam_width=beamwidth)
+        )
     test_ai_performance(get_name_beam(2), *numbers)
     test_ai_performance(get_name_beam(4), *numbers)
     test_ai_performance(get_name_beam(8), *numbers)
