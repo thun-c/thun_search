@@ -1,10 +1,8 @@
-import sys
 import random
-from copy import deepcopy
 import time
+from typing import Callable
 # import thunsearch._thunsearch as thun
 import thunsearch as thun
-from typing import List, Callable
 print("thun", [key for key in thun.__dict__.keys()])
 print("thun._thunsearch", [key for key in thun._thunsearch.__dict__.keys()])
 
@@ -88,7 +86,7 @@ class MazeState(thun.BaseState):
         return actions
 
     def clone(self):
-        return thun.clone_child(__class__, self)
+        return thun.clone_inherited_instance(__class__, self)
 
     def __str__(self):
         ss = ""
@@ -131,6 +129,10 @@ def test_ai_performance(name_ai, game_number, per_game_number):
     print(f"\"{name}\" score:{score_mean}\ttime:{time_mean}")
 
 
+def beam_py_function(beam_width) -> Callable:
+    return lambda state: thun.beam_search_action(state, beam_width)
+
+
 if __name__ == "__main__":
     print("thun.__version__", thun.__version__)
     # print([key for key in thun.__dict__.keys() if "__" != key[:2]])
@@ -158,7 +160,7 @@ if __name__ == "__main__":
     def get_name_beam(beamwidth):
         return (
             f"beam {beamwidth}",
-            thun.beam_py_function(beam_width=beamwidth)
+            beam_py_function(beam_width=beamwidth)
         )
     test_ai_performance(get_name_beam(2), *numbers)
     test_ai_performance(get_name_beam(4), *numbers)

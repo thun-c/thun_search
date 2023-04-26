@@ -212,7 +212,14 @@ PYBIND11_MODULE(_thunsearch, m)
         .def("clone", &State::clone)
         .def("_legal_actions", &State::_legal_actions);
 
-    m.def("randomAction", &randomAction);
+    m.def("randomAction", &randomAction, R"mydelimiter(
+        get futuer actions by random
+
+        Parameters
+        ----------
+
+        action: int
+    )mydelimiter");
     m.def("beamSearchAction", &beamSearchAction);
 
 #ifdef VERSION_INFO

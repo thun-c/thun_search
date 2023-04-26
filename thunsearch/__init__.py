@@ -7,24 +7,51 @@ _thun = _thunsearch
 __version__ = _thun.__version__
 
 
-def clone_child(child, instance):
-
-    cloned = child.__new__(child)
-    # clone C++ state
-    _thun.State.__init__(cloned, instance)
-    # clone Python state
-    cloned.__dict__ = {key: deepcopy(value)
-                       for key, value in instance.__dict__.items()}
-    return cloned
-
-
-def beam_py_function(beam_width) -> Callable:
-    return lambda state: _thun.beamSearchAction(state, beam_width)
-
-
 class BaseState(_thun.State):
+    """Abstract Class for Beam Search
+
+    If this class is inherited 
+    and virtual functions are implemented appropriately,
+    time series information-based search algorithms
+    such as beam search can be applied.
+
+    Parameters
+    ----------
+    msg : str
+        Human readable string describing the exception.
+    code : :obj:`int`, optional
+        Numeric error code.
+
+    Attributes
+    ----------
+    msg : str
+        Human readable string describing the exception.
+    code : int
+        Numeric error code.
+
+    """
+
     @abstractmethod
-    def advance(self, action):
+    def advance(self, action: int) -> None:
+        """Advance state by action
+
+        Note
+        ----------
+        Implementation is required for the following functions
+        - show_game
+        - play_game
+        - randomAction
+        - beamSearchAction
+
+        Parameters
+        ----------
+        action: int
+
+
+        Returns
+        -------
+        None
+        """
         raise NotImplementedError(
             f"{sys._getframe().f_code.co_name} is not implemented")
 
@@ -56,12 +83,43 @@ class BaseState(_thun.State):
         raise NotImplementedError(
             f"{sys._getframe().f_code.co_name} is not implemented.\n"
             f"It is recommended to write "
-            f"\"return clone_child(__class__, self)\"")
+            f"\"return thunsearch.clone_inherited_instance(__class__, self)\"")
 
     @abstractmethod
     def __str__(self):
         raise NotImplementedError(
             f"{sys._getframe().f_code.co_name} is not implemented")
+
+
+def beam_search_action(state: BaseState, beam_width: int):
+    return _thun.beamSearchAction(state, beam_width)
+
+
+def clone_inherited_instance(sub_class: type, instance: object) -> object:
+    """Clone object that inherit BaseClass
+
+    clone instance as deepcopy
+
+    Parameters
+    ----------
+    sub_class: type
+        Type of instance.
+        This is not a true BaseState, but rather an inherited BaseState.
+    instance : SubClass
+        instance of SubClass."SubClass" is specified in the first argument.
+
+    Returns
+    -------
+    SubClass
+        cloned instance
+    """
+    cloned = sub_class.__new__(sub_class)
+    # clone C++ state
+    _thun.State.__init__(cloned, instance)
+    # clone Python state
+    cloned.__dict__ = {key: deepcopy(value)
+                       for key, value in instance.__dict__.items()}
+    return cloned
 
 
 def show_game(state: BaseState, actions: List[int]):

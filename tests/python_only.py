@@ -7,7 +7,7 @@ from typing import List, Callable
 import heapq
 
 
-def clone_child(child, instance):
+def clone_inherited_instance(child, instance):
 
     cloned = child.__new__(child)
     cloned.__dict__ = {key: deepcopy(value)
@@ -47,7 +47,7 @@ class BaseState():
         raise NotImplementedError(
             f"{sys._getframe().f_code.co_name} is not implemented.\n"
             f"It is recommended to write "
-            f"\"return clone_child(__class__, self)\"")
+            f"\"return clone_inherited_instance(__class__, self)\"")
 
     @abstractmethod
     def __str__(self):
@@ -214,7 +214,7 @@ class MazeState(BaseState):
         return actions
 
     def clone(self):
-        return clone_child(__class__, self)
+        return clone_inherited_instance(__class__, self)
 
     def __str__(self):
         ss = ""
