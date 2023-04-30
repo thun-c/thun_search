@@ -15,23 +15,9 @@ class BaseState(_thun.State):
     time series information-based search algorithms
     such as beam search can be applied.
 
-    Parameters
-    ----------
-    msg : str
-        Human readable string describing the exception.
-    code : :obj:`int`, optional
-        Numeric error code.
-
-    Attributes
-    ----------
-    msg : str
-        Human readable string describing the exception.
-    code : int
-        Numeric error code.
 
     """
 
-    @abstractmethod
     def advance(self, action: int) -> None:
         """Advance state by action
 
@@ -78,12 +64,28 @@ class BaseState(_thun.State):
         raise NotImplementedError(
             f"{sys._getframe().f_code.co_name} is not implemented")
 
-    @abstractmethod
+    def __init_subclass__(cls, /,  **kwargs):
+        super().__init_subclass__(**kwargs)
+        cls.sub_cls = cls
+
     def clone(self):
-        raise NotImplementedError(
-            f"{sys._getframe().f_code.co_name} is not implemented.\n"
-            f"It is recommended to write "
-            f"\"return thunsearch.clone_inherited_instance(__class__, self)\"")
+        """Clone object that inherit BaseClass
+
+        clone instance as deepcopy
+
+        Returns
+        -------
+        SubClass
+            cloned instance
+        """
+        # sub_cls is Class that inherit BaseClass
+        cloned = self.sub_cls.__new__(self.sub_cls)
+        # clone C++ state
+        _thun.State.__init__(cloned, self)
+        # clone Python state
+        cloned.__dict__ = {key: deepcopy(value)
+                           for key, value in self.__dict__.items()}
+        return cloned
 
     @abstractmethod
     def __str__(self):

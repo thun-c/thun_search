@@ -85,9 +85,6 @@ class MazeState(thun.BaseState):
                 actions.append(action)
         return actions
 
-    def clone(self):
-        return thun.clone_inherited_instance(__class__, self)
-
     def __str__(self):
         ss = ""
         ss += f"turn:\t{self.turn_}\n"
@@ -145,14 +142,16 @@ if __name__ == "__main__":
     # print("state", [
     #       key for key in state.__dict__.keys() if True or "__" != key[:2]])
 
+    # for x in dir(MazeState):
+    #     if type(eval(MazeState.__name__ + "."+x)).__name__ == "function":
+    #         print(x)
+
     state = MazeState(0)
     # print("state\n###########\n", state)
     # state2 = state.cloneAdvanced(1)
     # print("state2\n###########\n", state2)
     # print("state\n###########\n", state)
-    # print(thun.randomAction(state))
-    # play_game(state, thun.randomAction)
-    # play_game(state, beam_py_function(beam_width=100))
+
     game_number = 10
     per_game_number = 10
     numbers = game_number, per_game_number
