@@ -46,11 +46,6 @@ public:
     // 探索用の盤面評価をする
     virtual void evaluate_score() = 0;
 
-    virtual void setEvaluateScore(double evaluated_score)
-    {
-        this->evaluated_score_ = evaluated_score;
-    }
-
     // 指定したactionでゲームを1ターン進める
     virtual void advance(const int action) = 0;
 

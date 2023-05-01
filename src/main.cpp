@@ -31,12 +31,7 @@ public:
     virtual bool is_dead() = 0;
 
     // 探索用の盤面評価をする
-    virtual void evaluate_score() = 0;
-
-    void setEvaluateScore(double evaluated_score)
-    {
-        this->evaluated_score_ = evaluated_score;
-    }
+    virtual double evaluate_score() = 0;
 
     std::shared_ptr<State> cloneAdvanced(int action)
     {
@@ -97,9 +92,9 @@ public:
         PYBIND11_OVERRIDE_PURE(/* Return type */ bool, /* Parent class */ State, /* Name of function */ is_done);
     }
 
-    void evaluate_score() override
+    double evaluate_score() override
     {
-        PYBIND11_OVERRIDE_PURE(/* Return type */ void, /* Parent class */ State, /* Name of function */ evaluate_score);
+        PYBIND11_OVERRIDE_PURE(/* Return type */ double, /* Parent class */ State, /* Name of function */ evaluate_score);
     }
 };
 
@@ -152,7 +147,7 @@ std::vector<int> beamSearchAction(std::shared_ptr<State> state, const int beam_w
                 {
                     continue;
                 }
-                next_state->evaluate_score();
+                next_state->evaluated_score_ = next_state->evaluate_score();
 
                 if (next_beam.size() >= beam_width && next_beam.top()->evaluated_score_ >= next_state->evaluated_score_)
                 {
@@ -206,7 +201,6 @@ PYBIND11_MODULE(_thunsearch, m)
         .def("is_done", &State::is_done)
         .def("is_dead", &State::is_dead)
         .def("evaluate_score", &State::evaluate_score)
-        .def("setEvaluateScore", &State::setEvaluateScore)
         .def("advance", &State::advance)
         .def("cloneAdvanced", &State::cloneAdvanced)
         .def("clone", &State::clone)

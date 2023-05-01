@@ -62,9 +62,8 @@ class MazeState(thun.BaseState):
     def is_dead(self):
         return self.trap_ == self.character_
 
-    def evaluate_score(self):
-        super().setEvaluateScore(self.game_score_)
-        return
+    def evaluate_score(self) -> float:
+        return self.game_score_
 
     def advance(self, action):
         self.character_.y_ += MazeState.dy[action]

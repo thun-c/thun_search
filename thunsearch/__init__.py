@@ -15,6 +15,8 @@ class BaseState(_thun.State):
     time series information-based search algorithms
     such as beam search can be applied.
 
+    Why neither A nor B is used?
+
 
     """
 
@@ -60,7 +62,7 @@ class BaseState(_thun.State):
             f"{sys._getframe().f_code.co_name} is not implemented")
 
     @abstractmethod
-    def evaluate_score(self):
+    def evaluate_score(self) -> float:
         raise NotImplementedError(
             f"{sys._getframe().f_code.co_name} is not implemented")
 
