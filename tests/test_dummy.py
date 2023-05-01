@@ -131,23 +131,11 @@ def beam_py_function(beam_width) -> Callable:
 
 if __name__ == "__main__":
     print("thun.__version__", thun.__version__)
-    # print([key for key in thun.__dict__.keys() if "__" != key[:2]])
-    # state = MazeState(0)
-    # print("thun.State", [
-    #       key for key in thun.State.__dict__.keys() if "__" != key[:2]])
-    # print("MazeState", [
-    #       key for key in MazeState.__dict__.keys() if "__" != key[:2]])
-
-    # print("state", [
-    #       key for key in state.__dict__.keys() if True or "__" != key[:2]])
-
-    # for x in dir(MazeState):
-    #     if type(eval(MazeState.__name__ + "."+x)).__name__ == "function":
-    #         print(x)
     print("not_implemented_should", MazeState.get_not_implemented_should_methods())
     print("not_implemented_can", MazeState.get_not_implemented_can_methods())
 
-    state = MazeState(0)
+    state = MazeState(1)
+    # thun.play_game(state, beam_py_function(2))
     # print("state\n###########\n", state)
     # import sys
     # sys.exit()
@@ -164,6 +152,8 @@ if __name__ == "__main__":
             f"beam {beamwidth}",
             beam_py_function(beam_width=beamwidth)
         )
+
+    test_ai_performance(get_name_beam(1), *numbers)
     test_ai_performance(get_name_beam(2), *numbers)
     test_ai_performance(get_name_beam(4), *numbers)
     test_ai_performance(get_name_beam(8), *numbers)

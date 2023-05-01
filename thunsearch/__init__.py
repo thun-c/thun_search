@@ -104,19 +104,23 @@ class BaseState(_thun.State):
             f"{sys._getframe().f_code.co_name} is not implemented")
 
     @must
-    def is_dead(self):
-        raise NotImplementedError(
-            f"{sys._getframe().f_code.co_name} is not implemented")
-
-    @must
     def evaluate_score(self) -> float:
         raise NotImplementedError(
             f"{sys._getframe().f_code.co_name} is not implemented")
 
-    @should
+    @can
+    def is_dead(self) -> bool:
+        return False
+
+    @can
     def __str__(self):
-        raise NotImplementedError(
-            f"{sys._getframe().f_code.co_name} is not implemented")
+        ret_s = ""
+        for key, value in self.__dict__.items():
+            ret_s += f"{key}:"
+            if hasattr(value, "__str__"):
+                ret_s += f"{value}"
+            ret_s += "\n"
+        return ret_s
 
     @can
     def clone(self):
@@ -141,33 +145,6 @@ class BaseState(_thun.State):
 
 def beam_search_action(state: BaseState, beam_width: int):
     return _thun.beamSearchAction(state, beam_width)
-
-
-def clone_inherited_instance(sub_class: type, instance: object) -> object:
-    """Clone object that inherit BaseClass
-
-    clone instance as deepcopy
-
-    Parameters
-    ----------
-    sub_class: type
-        Type of instance.
-        This is not a true BaseState, but rather an inherited BaseState.
-    instance : SubClass
-        instance of SubClass."SubClass" is specified in the first argument.
-
-    Returns
-    -------
-    SubClass
-        cloned instance
-    """
-    cloned = sub_class.__new__(sub_class)
-    # clone C++ state
-    _thun.State.__init__(cloned, instance)
-    # clone Python state
-    cloned.__dict__ = {key: deepcopy(value)
-                       for key, value in instance.__dict__.items()}
-    return cloned
 
 
 def show_game(state: BaseState, actions: List[int]):
