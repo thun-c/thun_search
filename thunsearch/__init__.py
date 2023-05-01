@@ -1,5 +1,5 @@
 import sys
-from typing import List, Callable
+from typing import List, Callable, Set
 from copy import deepcopy
 from ._thunsearch import *
 _thun = _thunsearch
@@ -7,32 +7,54 @@ __version__ = _thun.__version__
 
 
 def must(func_obj):
+    """Decorator for function that must be implemented
+
+    If the function decorated by this decorator is not implemented,
+    the instance cannot be created.
+    """
     func_obj.__must__ = True
     return func_obj
 
 
 def should(func_obj):
+    """Decorator for function that sholud be implemented
+
+    If the function decorated by this decorator is not implemented,
+    an instance can be created but some functions cannot be executed.
+    """
     func_obj.__should__ = True
     return func_obj
 
 
 def can(func_obj):
+    """Decorator for function that can be overrided
+
+    The function qualified by this decorator is
+    subject to the implementation on the
+    base class side unless overridden on the subclass side.
+    """
     func_obj.__can__ = True
     return func_obj
 
 
-def _get_labeled_functions(obj, label: str):
+def _get_labeled_functions(obj, label: str) -> Set[str]:
+    """
+    Gets the functions with the specified label.
+    """
     return {k for k, v in obj.__dict__.items() if hasattr(v, label)}
 
 
 def _get_functions(obj):
+    """
+    Gets the functions.
+    """
     return {k for k, v in obj.__dict__.items() if type(v).__name__ == "function"}
 
 
 class BaseState(_thun.State):
     """Abstract Class for Beam Search
 
-    If this class is inherited 
+    If this class is inherited
     and virtual functions are implemented appropriately,
     time series information-based search algorithms
     such as beam search can be applied.
@@ -40,6 +62,8 @@ class BaseState(_thun.State):
     """
 
     def __new__(cls, *args, **kwargs):
+        """Create a instance while checking whether functions labeled "must" are implemented.
+        """
         must_functions = (_get_labeled_functions(__class__, "__must__"))
         sub_functions = (_get_functions(cls))
 
@@ -73,13 +97,9 @@ class BaseState(_thun.State):
     def advance(self, action: int) -> None:
         """Advance state by action
 
-        Note
+        Label
         ----------
-        Implementation is required for the following functions
-        - show_game
-        - play_game
-        - randomAction
-        - beamSearchAction
+        "must": Must be implemented.
 
         Parameters
         ----------
@@ -95,21 +115,83 @@ class BaseState(_thun.State):
 
     @must
     def legal_actions(self) -> List[int]:
+        """Get legal actions
+
+        Label
+        ----------
+        "must": Must be implemented.
+
+        Parameters
+        ----------
+        None
+
+
+        Returns
+        -------
+        actions:List[int]
+        """
         raise NotImplementedError(
             f"{sys._getframe().f_code.co_name} is not implemented")
 
     @must
-    def is_done(self):
+    def is_done(self) -> bool:
+        """Check game is done
+
+        Label
+        ----------
+        "must": Must be implemented.
+
+        Parameters
+        ----------
+        None
+
+
+        Returns
+        -------
+        actions:List[int]
+        """
         raise NotImplementedError(
             f"{sys._getframe().f_code.co_name} is not implemented")
 
     @must
     def evaluate_score(self) -> float:
+        """evaluate score and return
+
+        Label
+        ----------
+        "must": Must be implemented.
+
+        Parameters
+        ----------
+        None
+
+
+        Returns
+        -------
+        evaluated_score:float
+        """
         raise NotImplementedError(
             f"{sys._getframe().f_code.co_name} is not implemented")
 
     @can
     def is_dead(self) -> bool:
+        """Check to see if the game ended badly
+
+        If not overridden by a subclass, always returns False.
+
+        Label
+        ----------
+        "can": Can be overided.
+
+        Parameters
+        ----------
+        None
+
+
+        Returns
+        -------
+        evaluated_score:float
+        """
         return False
 
     @can
