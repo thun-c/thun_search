@@ -144,9 +144,13 @@ if __name__ == "__main__":
     # for x in dir(MazeState):
     #     if type(eval(MazeState.__name__ + "."+x)).__name__ == "function":
     #         print(x)
+    print("not_implemented_should", MazeState.get_not_implemented_should_methods())
+    print("not_implemented_can", MazeState.get_not_implemented_can_methods())
 
     state = MazeState(0)
     # print("state\n###########\n", state)
+    # import sys
+    # sys.exit()
     # state2 = state.cloneAdvanced(1)
     # print("state2\n###########\n", state2)
     # print("state\n###########\n", state)

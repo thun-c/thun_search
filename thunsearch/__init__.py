@@ -1,10 +1,32 @@
 import sys
-from abc import abstractmethod
 from typing import List, Callable
 from copy import deepcopy
 from ._thunsearch import *
 _thun = _thunsearch
 __version__ = _thun.__version__
+
+
+def must(func_obj):
+    func_obj.__must__ = True
+    return func_obj
+
+
+def should(func_obj):
+    func_obj.__should__ = True
+    return func_obj
+
+
+def can(func_obj):
+    func_obj.__can__ = True
+    return func_obj
+
+
+def _get_labeled_functions(obj, label: str):
+    return {k for k, v in obj.__dict__.items() if hasattr(v, label)}
+
+
+def _get_functions(obj):
+    return {k for k, v in obj.__dict__.items() if type(v).__name__ == "function"}
 
 
 class BaseState(_thun.State):
@@ -15,11 +37,39 @@ class BaseState(_thun.State):
     time series information-based search algorithms
     such as beam search can be applied.
 
-    Why neither A nor B is used?
-
-
     """
 
+    def __new__(cls, *args, **kwargs):
+        must_functions = (_get_labeled_functions(__class__, "__must__"))
+        sub_functions = (_get_functions(cls))
+
+        not_implemented_musts = must_functions-sub_functions
+        if len(not_implemented_musts) > 0:
+            joined_musts = " , ".join([k for k in list(not_implemented_musts)])
+            raise NotImplementedError(
+                f"must functions are not implemented. [{joined_musts}] ")
+        return super(__class__, cls).__new__(cls, *args, **kwargs)
+
+    def _legal_actions(self) -> _thun.VectorInt:
+        return _thun.VectorInt(self.legal_actions())
+
+    def __init_subclass__(cls, /,  **kwargs):
+        super().__init_subclass__(**kwargs)
+        cls.sub_cls = cls
+
+    @classmethod
+    def get_not_implemented_should_methods(cls):
+        base_functions = _get_labeled_functions(__class__, "__should__")
+        sub_functions = _get_functions(cls)
+        return base_functions-sub_functions
+
+    @classmethod
+    def get_not_implemented_can_methods(cls):
+        base_functions = _get_labeled_functions(__class__, "__can__")
+        sub_functions = _get_functions(cls)
+        return base_functions-sub_functions
+
+    @must
     def advance(self, action: int) -> None:
         """Advance state by action
 
@@ -43,33 +93,32 @@ class BaseState(_thun.State):
         raise NotImplementedError(
             f"{sys._getframe().f_code.co_name} is not implemented")
 
-    @abstractmethod
+    @must
     def legal_actions(self) -> List[int]:
         raise NotImplementedError(
             f"{sys._getframe().f_code.co_name} is not implemented")
 
-    def _legal_actions(self) -> _thun.VectorInt:
-        return _thun.VectorInt(self.legal_actions())
-
-    @abstractmethod
+    @must
     def is_done(self):
         raise NotImplementedError(
             f"{sys._getframe().f_code.co_name} is not implemented")
 
-    @abstractmethod
+    @must
     def is_dead(self):
         raise NotImplementedError(
             f"{sys._getframe().f_code.co_name} is not implemented")
 
-    @abstractmethod
+    @must
     def evaluate_score(self) -> float:
         raise NotImplementedError(
             f"{sys._getframe().f_code.co_name} is not implemented")
 
-    def __init_subclass__(cls, /,  **kwargs):
-        super().__init_subclass__(**kwargs)
-        cls.sub_cls = cls
+    @should
+    def __str__(self):
+        raise NotImplementedError(
+            f"{sys._getframe().f_code.co_name} is not implemented")
 
+    @can
     def clone(self):
         """Clone object that inherit BaseClass
 
@@ -88,11 +137,6 @@ class BaseState(_thun.State):
         cloned.__dict__ = {key: deepcopy(value)
                            for key, value in self.__dict__.items()}
         return cloned
-
-    @abstractmethod
-    def __str__(self):
-        raise NotImplementedError(
-            f"{sys._getframe().f_code.co_name} is not implemented")
 
 
 def beam_search_action(state: BaseState, beam_width: int):
