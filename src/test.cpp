@@ -28,14 +28,14 @@ constexpr const int H = 3;  // 迷路の高さ
 constexpr const int W = 4;  // 迷路の幅
 constexpr int END_TURN = 4; // ゲーム終了ターン
 
-class State : public std::enable_shared_from_this<State>
+class ContextualState : public std::enable_shared_from_this<ContextualState>
 {
 private:
 public:
-    std::shared_ptr<State> parent_ = nullptr;
+    std::shared_ptr<ContextualState> parent_ = nullptr;
     double evaluated_score_ = 0; // 探索上で評価したスコア
     int last_action_ = -1;       // 探索木のルートノードで最初に選択した行動
-    virtual ~State() {}
+    virtual ~ContextualState() {}
 
     // ゲームの終了判定
     virtual bool is_done() = 0;
@@ -53,11 +53,11 @@ public:
     virtual std::vector<int> legal_actions() = 0;
 
     // インスタンスをコピーする。
-    virtual std::shared_ptr<State> clone() = 0;
+    virtual std::shared_ptr<ContextualState> clone() = 0;
 
     virtual std::string __str__() = 0;
 
-    std::shared_ptr<State> cloneAdvanced(int action)
+    std::shared_ptr<ContextualState> cloneAdvanced(int action)
     {
         auto clone = this->clone();
         auto actions = clone->legal_actions();
@@ -69,16 +69,16 @@ public:
 };
 
 // 探索時のソート用に評価を比較する
-bool operator<(const State &state_1, const State &state_2)
+bool operator<(const ContextualState &state_1, const ContextualState &state_2)
 {
     return state_1.evaluated_score_ < state_2.evaluated_score_;
 }
-bool operator<(const std::shared_ptr<State> &state_1, const std::shared_ptr<State> &state_2)
+bool operator<(const std::shared_ptr<ContextualState> &state_1, const std::shared_ptr<ContextualState> &state_2)
 {
     return state_1->evaluated_score_ < state_2->evaluated_score_;
 }
 
-class MazeState : public State
+class MazeState : public ContextualState
 {
 private:
     static constexpr const int dx[4] = {1, -1, 0, 0}; // 右、左、下、上への移動方向のx成分
@@ -206,16 +206,16 @@ public:
         return ss.str();
     }
 
-    std::shared_ptr<State> clone() override
+    std::shared_ptr<ContextualState> clone() override
     {
         auto *cloned_state = new MazeState();
         *cloned_state = *this;
-        return std::shared_ptr<State>(std::move(cloned_state));
+        return std::shared_ptr<ContextualState>(std::move(cloned_state));
     }
 };
 
 // ランダムに行動を決定する
-std::vector<int> randomAction(std::shared_ptr<State> state)
+std::vector<int> randomAction(std::shared_ptr<ContextualState> state)
 {
     while (!state->is_done() && !state->is_dead())
     {
@@ -234,20 +234,20 @@ std::vector<int> randomAction(std::shared_ptr<State> state)
 }
 
 // ビーム幅と深さを指定してビームサーチで行動を決定する
-std::vector<int> beamSearchAction_naive(std::shared_ptr<State> state, const int beam_width)
+std::vector<int> beamSearchAction_naive(std::shared_ptr<ContextualState> state, const int beam_width)
 {
-    std::priority_queue<std::shared_ptr<State>> now_beam;
-    std::shared_ptr<State> best_state;
+    std::priority_queue<std::shared_ptr<ContextualState>> now_beam;
+    std::shared_ptr<ContextualState> best_state;
 
     now_beam.emplace(state);
     for (int t = 0;; t++)
     {
-        std::priority_queue<std::shared_ptr<State>> next_beam;
+        std::priority_queue<std::shared_ptr<ContextualState>> next_beam;
         for (int i = 0; i < beam_width; i++)
         {
             if (now_beam.empty())
                 break;
-            std::shared_ptr<State> now_state = now_beam.top();
+            std::shared_ptr<ContextualState> now_state = now_beam.top();
             if (i >= 1)
             {
                 assert(now_state->parent_ != nullptr);
@@ -286,22 +286,22 @@ std::vector<int> beamSearchAction_naive(std::shared_ptr<State> state, const int 
 }
 
 // ビーム幅を指定してビームサーチで行動を決定する
-std::vector<int> beamSearchAction(std::shared_ptr<State> state, const int beam_width)
+std::vector<int> beamSearchAction(std::shared_ptr<ContextualState> state, const int beam_width)
 {
-    using StatePtr = std::shared_ptr<State>;
-    std::priority_queue<StatePtr, std::vector<StatePtr>, std::greater<StatePtr>> now_beam;
-    std::shared_ptr<State> best_state = nullptr;
+    using ContextualStatePtr = std::shared_ptr<ContextualState>;
+    std::priority_queue<ContextualStatePtr, std::vector<ContextualStatePtr>, std::greater<ContextualStatePtr>> now_beam;
+    std::shared_ptr<ContextualState> best_state = nullptr;
 
     now_beam.emplace(state);
     for (int t = 0;; t++)
     {
-        std::priority_queue<StatePtr, std::vector<StatePtr>, std::greater<StatePtr>> next_beam;
+        std::priority_queue<ContextualStatePtr, std::vector<ContextualStatePtr>, std::greater<ContextualStatePtr>> next_beam;
 
         for (int i = 0; i < beam_width; i++)
         {
             if (now_beam.empty())
                 break;
-            std::shared_ptr<State> now_state = now_beam.top();
+            std::shared_ptr<ContextualState> now_state = now_beam.top();
             cout << "t " << t << "\tnow_score:" << now_state->evaluated_score_ << endl;
 
             now_beam.pop();
@@ -357,24 +357,24 @@ std::vector<int> beamSearchAction(std::shared_ptr<State> state, const int beam_w
 }
 
 // ビーム幅と深さを指定してビームサーチで行動を決定する
-std::vector<int> beamSearchActionByNthElement(std::shared_ptr<State> state, const int beam_width)
+std::vector<int> beamSearchActionByNthElement(std::shared_ptr<ContextualState> state, const int beam_width)
 {
-    using StatePtr = std::shared_ptr<State>;
-    std::vector<StatePtr> now_beam; // priority_queueからvectorに変更
+    using ContextualStatePtr = std::shared_ptr<ContextualState>;
+    std::vector<ContextualStatePtr> now_beam; // priority_queueからvectorに変更
 
     now_beam.emplace_back(state);
     for (int t = 0;; t++)
     {
-        std::vector<StatePtr> next_beam; // priority_queueからvectorに変更
+        std::vector<ContextualStatePtr> next_beam; // priority_queueからvectorに変更
 
         // 常にnow_beam.size()<=beam_widthになるように後続の処理で調整し、
         // 拡張for文でnow_stateを取り出す
-        for (StatePtr now_state : now_beam)
+        for (ContextualStatePtr now_state : now_beam)
         {
             auto legal_actions = now_state->legal_actions();
             for (const auto &action : legal_actions)
             {
-                StatePtr next_state = now_state->cloneAdvanced(action);
+                ContextualStatePtr next_state = now_state->cloneAdvanced(action);
                 if (next_state->is_dead())
                 {
                     continue;
@@ -399,10 +399,10 @@ std::vector<int> beamSearchActionByNthElement(std::shared_ptr<State> state, cons
             break;
         }
     }
-    StatePtr best_state = nullptr;
+    ContextualStatePtr best_state = nullptr;
     // 最も良いstateを取り出す。
     // nth_elementで処理した場合、0番目が最大であることが保証されない。
-    for (StatePtr now_state : now_beam)
+    for (ContextualStatePtr now_state : now_beam)
     {
         if (best_state == nullptr || now_state->evaluated_score_ > best_state->evaluated_score_)
         {
@@ -421,13 +421,13 @@ std::vector<int> beamSearchActionByNthElement(std::shared_ptr<State> state, cons
 }
 
 // ビーム幅と深さを指定してビームサーチで行動を決定する
-std::vector<int> beamSearchActionMp(std::shared_ptr<State> state, const int beam_width, const int thread_n)
+std::vector<int> beamSearchActionMp(std::shared_ptr<ContextualState> state, const int beam_width, const int thread_n)
 {
-    using StatePtr = std::shared_ptr<State>;
-    std::vector<std::vector<StatePtr>> now_beams(thread_n);
-    std::vector<std::vector<StatePtr>> next_beams(thread_n);
+    using ContextualStatePtr = std::shared_ptr<ContextualState>;
+    std::vector<std::vector<ContextualStatePtr>> now_beams(thread_n);
+    std::vector<std::vector<ContextualStatePtr>> next_beams(thread_n);
     now_beams[0].emplace_back(state);
-    std::vector<StatePtr> now_beam;
+    std::vector<ContextualStatePtr> now_beam;
 
     for (int t = 0;; t++)
     {
@@ -440,12 +440,12 @@ std::vector<int> beamSearchActionMp(std::shared_ptr<State> state, const int beam
             per_next_beam.clear();
 
             auto &per_beam = now_beams[k];
-            for (StatePtr now_state : per_beam)
+            for (ContextualStatePtr now_state : per_beam)
             {
                 auto legal_actions = now_state->legal_actions();
                 for (const auto &action : legal_actions)
                 {
-                    StatePtr next_state = now_state->cloneAdvanced(action);
+                    ContextualStatePtr next_state = now_state->cloneAdvanced(action);
                     if (next_state->is_dead())
                     {
                         continue;
@@ -473,12 +473,12 @@ std::vector<int> beamSearchActionMp(std::shared_ptr<State> state, const int beam
         //     per_next_beam.clear();
 
         //     auto &per_beam = now_beams[k];
-        //     for (StatePtr now_state : per_beam)
+        //     for (ContextualStatePtr now_state : per_beam)
         //     {
         //         auto legal_actions = now_state->legal_actions();
         //         for (const auto &action : legal_actions)
         //         {
-        //             StatePtr next_state = now_state->cloneAdvanced(action);
+        //             ContextualStatePtr next_state = now_state->cloneAdvanced(action);
         //             if (next_state->is_dead())
         //             {
         //                 continue;
@@ -535,10 +535,10 @@ std::vector<int> beamSearchActionMp(std::shared_ptr<State> state, const int beam
             now_beams[k].emplace_back(now_beam[j]);
         }
     }
-    StatePtr best_state = nullptr;
+    ContextualStatePtr best_state = nullptr;
     // 最も良いstateを取り出す。
     // nth_elementで処理した場合、0番目が最大であることが保証されない。
-    for (StatePtr now_state : now_beam)
+    for (ContextualStatePtr now_state : now_beam)
     {
         if (best_state == nullptr || now_state->evaluated_score_ > best_state->evaluated_score_)
         {
@@ -557,7 +557,7 @@ std::vector<int> beamSearchActionMp(std::shared_ptr<State> state, const int beam
 }
 
 // シードを指定してゲーム状況を表示しながらAIにプレイさせる。
-void show_game(std::shared_ptr<State> org_state, const std::vector<int> &actions)
+void show_game(std::shared_ptr<ContextualState> org_state, const std::vector<int> &actions)
 {
     auto state = org_state->clone();
     using std::cout;
@@ -574,10 +574,10 @@ void show_game(std::shared_ptr<State> org_state, const std::vector<int> &actions
     cout << line << endl;
 }
 
-using AIFunction = std::function<std::vector<int>(std::shared_ptr<State>)>;
+using AIFunction = std::function<std::vector<int>(std::shared_ptr<ContextualState>)>;
 using StringAIPair = std::pair<std::string, AIFunction>;
 
-void play_game(std::shared_ptr<State> state, StringAIPair ai)
+void play_game(std::shared_ptr<ContextualState> state, StringAIPair ai)
 {
     cout << "play_game start" << endl;
     auto actions = ai.second(state);
@@ -661,10 +661,10 @@ int main()
 {
     using namespace std;
     // playGame(0);
-    // auto a = std::shared_ptr<State>(new MazeState(0));
+    // auto a = std::shared_ptr<ContextualState>(new MazeState(0));
     // a->evaluated_score_ = 100;
     // DUMP(a->evaluated_score_);
-    // auto b = std::shared_ptr<State>(a->clone());
+    // auto b = std::shared_ptr<ContextualState>(a->clone());
     // b->parent_ = a;
     // b->evaluated_score_ = 200;
     // DUMP(a->evaluated_score_);
@@ -679,15 +679,15 @@ int main()
 
     int beam_width = 2;
     int thread_n = 6;
-    const auto &random_ai = StringAIPair("randomAction", [&](std::shared_ptr<State> state)
+    const auto &random_ai = StringAIPair("randomAction", [&](std::shared_ptr<ContextualState> state)
                                          { return randomAction(state); });
-    const auto &beam_naive_ai = StringAIPair("beamSearchAction_naive", [&](std::shared_ptr<State> state)
+    const auto &beam_naive_ai = StringAIPair("beamSearchAction_naive", [&](std::shared_ptr<ContextualState> state)
                                              { return beamSearchAction_naive(state, beam_width); });
-    const auto &beam_ai = StringAIPair("beamSearchAction", [&](std::shared_ptr<State> state)
+    const auto &beam_ai = StringAIPair("beamSearchAction", [&](std::shared_ptr<ContextualState> state)
                                        { return beamSearchAction(state, beam_width); });
-    const auto &beam_nth_ai = StringAIPair("beamSearchActionByNthElement", [&](std::shared_ptr<State> state)
+    const auto &beam_nth_ai = StringAIPair("beamSearchActionByNthElement", [&](std::shared_ptr<ContextualState> state)
                                            { return beamSearchActionByNthElement(state, beam_width); });
-    const auto &beam_mp_ai = StringAIPair("beamSearchActionMp " + std::to_string(thread_n), [&](std::shared_ptr<State> state)
+    const auto &beam_mp_ai = StringAIPair("beamSearchActionMp " + std::to_string(thread_n), [&](std::shared_ptr<ContextualState> state)
                                           { return beamSearchActionMp(state, beam_width, thread_n); });
     auto state = std::make_shared<MazeState>(1);
     auto actions = beam_ai.second(state);

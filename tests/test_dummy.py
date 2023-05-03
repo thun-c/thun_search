@@ -19,7 +19,7 @@ class Coord:
         return not self.__eq__(other)
 
 
-class MazeState(thun.BaseState):
+class MazeState(thun.BaseContextualState):
     dy = [0, 0, 1, -1]  # 右、左、下、上への移動方向のy成分
     dx = [1, -1, 0, 0]  # 右、左、下、上への移動方向のx成分
     H = 3
@@ -127,8 +127,10 @@ def beam_py_function(beam_width) -> Callable:
 
 if __name__ == "__main__":
     print("thun.__version__", thun.__version__)
-    print("not_implemented_should", MazeState.get_not_implemented_should_methods())
-    print("not_implemented_can", MazeState.get_not_implemented_can_methods())
+    print("not_implemented_should",
+          MazeState.get_not_implemented_should_methods())
+    print("not_implemented_can",
+          MazeState.get_not_implemented_can_methods())
 
     state = MazeState(1)
     # thun.play_task(state, thun.beam_search_action, 2)

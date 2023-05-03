@@ -15,7 +15,7 @@ def clone_inherited_instance(child, instance):
     return cloned
 
 
-class BaseState():
+class BaseContextualState():
     def __init__(self) -> None:
         self.parent_ = None
         self.evaluated_score_ = 0
@@ -58,7 +58,7 @@ class BaseState():
         return self.evaluated_score_ < other.evaluated_score_
 
     def cloneAdvanced(self, action: int):
-        cloned: BaseState = self.clone()
+        cloned: BaseContextualState = self.clone()
         cloned.advance(action)
         cloned.parent_ = self
         cloned.last_action_ = action
@@ -70,12 +70,12 @@ class BaseState():
             f"{sys._getframe().f_code.co_name} is not implemented")
 
 
-def beamSearchAction(state: BaseState, beam_width):
-    now_beam: List[BaseState] = []
-    best_state: BaseState = None
+def beamSearchAction(state: BaseContextualState, beam_width):
+    now_beam: List[BaseContextualState] = []
+    best_state: BaseContextualState = None
     heapq.heappush(now_beam, state)
     while True:
-        next_beam: List[BaseState] = []
+        next_beam: List[BaseContextualState] = []
 
         for i in range(beam_width):
             if len(now_beam) == 0:
@@ -120,7 +120,7 @@ def beam_py_function(beam_width):
     return lambda state: beamSearchAction(state, beam_width)
 
 
-def show_game(state: BaseState, actions: List[int]):
+def show_game(state: BaseContextualState, actions: List[int]):
     state = state.clone()
     line = "#"*30
     print(line)
@@ -132,7 +132,7 @@ def show_game(state: BaseState, actions: List[int]):
     print(line)
 
 
-def play_game(state: BaseState, ai: Callable):
+def play_game(state: BaseContextualState, ai: Callable):
     show_game(state, ai(state))
 
 
@@ -151,7 +151,7 @@ class Coord:
         return not self.__eq__(other)
 
 
-class MazeState(BaseState):
+class MazeState(BaseContextualState):
     dy = [0, 0, 1, -1]  # 右、左、下、上への移動方向のy成分
     dx = [1, -1, 0, 0]  # 右、左、下、上への移動方向のx成分
     H = 3

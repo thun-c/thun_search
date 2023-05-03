@@ -13,15 +13,15 @@ using std::cerr;
 using std::cout;
 using std::endl;
 
-class State : public std::enable_shared_from_this<State>
+class ContextualState : public std::enable_shared_from_this<ContextualState>
 {
 public:
-    std::shared_ptr<State> parent_ = nullptr;
+    std::shared_ptr<ContextualState> parent_ = nullptr;
     double evaluated_score_ = 0; // 探索上で評価したスコア
     int last_action_ = -1;       // 直前に選択した行動
 
-    virtual ~State() {}
-    virtual std::shared_ptr<State> clone() const = 0;
+    virtual ~ContextualState() {}
+    virtual std::shared_ptr<ContextualState> clone() const = 0;
     virtual void advance(const int action) = 0;
     virtual std::vector<int> _legal_actions() = 0;
 
@@ -33,7 +33,7 @@ public:
     // 探索用の盤面評価をする
     virtual double evaluate_score() = 0;
 
-    std::shared_ptr<State> cloneAdvanced(int action)
+    std::shared_ptr<ContextualState> cloneAdvanced(int action)
     {
         auto clone = this->clone();
         auto actions = clone->_legal_actions();
@@ -45,61 +45,61 @@ public:
 };
 
 // 探索時のソート用に評価を比較する
-bool operator<(const State &state_1, const State &state_2)
+bool operator<(const ContextualState &state_1, const ContextualState &state_2)
 {
     return state_1.evaluated_score_ < state_2.evaluated_score_;
 }
-bool operator<(const std::shared_ptr<State> &state_1, const std::shared_ptr<State> &state_2)
+bool operator<(const std::shared_ptr<ContextualState> &state_1, const std::shared_ptr<ContextualState> &state_2)
 {
     return state_1->evaluated_score_ < state_2->evaluated_score_;
 }
 
-class PyState : public State
+class PyContextualState : public ContextualState
 {
 public:
     /* Inherit the constructors */
-    using State::State;
-    PyState(const State &state) : State(state) {}
+    using ContextualState::ContextualState;
+    PyContextualState(const ContextualState &state) : ContextualState(state) {}
     /* Trampoline (need one for each virtual function) */
-    std::shared_ptr<State> clone() const override
+    std::shared_ptr<ContextualState> clone() const override
     {
         auto self = py::cast(this);
         auto cloned = self.attr("clone")();
 
         auto keep_python_state_alive = std::make_shared<py::object>(cloned);
-        auto ptr = cloned.cast<PyState *>();
+        auto ptr = cloned.cast<PyContextualState *>();
 
         // aliasing shared_ptr: points to `A_trampoline* ptr` but refcounts the Python object
-        return std::shared_ptr<State>(keep_python_state_alive, ptr);
+        return std::shared_ptr<ContextualState>(keep_python_state_alive, ptr);
     }
 
     void advance(int action) override
     {
-        PYBIND11_OVERRIDE_PURE(/* Return type */ void, /* Parent class */ State, /* Name of function */ advance, /* args */ action);
+        PYBIND11_OVERRIDE_PURE(/* Return type */ void, /* Parent class */ ContextualState, /* Name of function */ advance, /* args */ action);
     }
     std::vector<int> _legal_actions() override
     {
-        PYBIND11_OVERRIDE_PURE(/* Return type */ std::vector<int>, /* Parent class */ State, /* Name of function */ _legal_actions);
+        PYBIND11_OVERRIDE_PURE(/* Return type */ std::vector<int>, /* Parent class */ ContextualState, /* Name of function */ _legal_actions);
     }
 
     bool is_dead() override
     {
-        PYBIND11_OVERRIDE_PURE(/* Return type */ bool, /* Parent class */ State, /* Name of function */ is_dead);
+        PYBIND11_OVERRIDE_PURE(/* Return type */ bool, /* Parent class */ ContextualState, /* Name of function */ is_dead);
     }
 
     bool is_done() override
     {
-        PYBIND11_OVERRIDE_PURE(/* Return type */ bool, /* Parent class */ State, /* Name of function */ is_done);
+        PYBIND11_OVERRIDE_PURE(/* Return type */ bool, /* Parent class */ ContextualState, /* Name of function */ is_done);
     }
 
     double evaluate_score() override
     {
-        PYBIND11_OVERRIDE_PURE(/* Return type */ double, /* Parent class */ State, /* Name of function */ evaluate_score);
+        PYBIND11_OVERRIDE_PURE(/* Return type */ double, /* Parent class */ ContextualState, /* Name of function */ evaluate_score);
     }
 };
 
 // ランダムに行動を決定する
-std::vector<int> randomAction(std::shared_ptr<State> state)
+std::vector<int> randomAction(std::shared_ptr<ContextualState> state)
 {
     using namespace std;
     while (!state->is_done() && !state->is_dead())
@@ -120,22 +120,22 @@ std::vector<int> randomAction(std::shared_ptr<State> state)
 }
 
 // ビーム幅を指定してビームサーチで行動を決定する
-std::vector<int> beamSearchAction(std::shared_ptr<State> state, const int beam_width)
+std::vector<int> beamSearchAction(std::shared_ptr<ContextualState> state, const int beam_width)
 {
-    using StatePtr = std::shared_ptr<State>;
-    std::priority_queue<StatePtr, std::vector<StatePtr>, std::greater<StatePtr>> now_beam;
-    std::shared_ptr<State> best_state = nullptr;
+    using ContextualStatePtr = std::shared_ptr<ContextualState>;
+    std::priority_queue<ContextualStatePtr, std::vector<ContextualStatePtr>, std::greater<ContextualStatePtr>> now_beam;
+    std::shared_ptr<ContextualState> best_state = nullptr;
 
     now_beam.emplace(state);
     for (int t = 0;; t++)
     {
-        std::priority_queue<StatePtr, std::vector<StatePtr>, std::greater<StatePtr>> next_beam;
+        std::priority_queue<ContextualStatePtr, std::vector<ContextualStatePtr>, std::greater<ContextualStatePtr>> next_beam;
 
         for (int i = 0; i < beam_width; i++)
         {
             if (now_beam.empty())
                 break;
-            std::shared_ptr<State> now_state = now_beam.top();
+            std::shared_ptr<ContextualState> now_state = now_beam.top();
             // cout << "t " << t << "\tnow_score:" << now_state->evaluated_score_ << endl;
 
             now_beam.pop();
@@ -195,16 +195,16 @@ PYBIND11_MODULE(_thunsearch, m)
 {
     py::bind_vector<std::vector<int>>(m, "VectorInt");
 
-    py::class_<State, PyState, std::shared_ptr<State>>(m, "State")
+    py::class_<ContextualState, PyContextualState, std::shared_ptr<ContextualState>>(m, "ContextualState")
         .def(py::init<>())
-        .def(py::init<const State &>())
-        .def("is_done", &State::is_done)
-        .def("is_dead", &State::is_dead)
-        .def("evaluate_score", &State::evaluate_score)
-        .def("advance", &State::advance)
-        .def("cloneAdvanced", &State::cloneAdvanced)
-        .def("clone", &State::clone)
-        .def("_legal_actions", &State::_legal_actions);
+        .def(py::init<const ContextualState &>())
+        .def("is_done", &ContextualState::is_done)
+        .def("is_dead", &ContextualState::is_dead)
+        .def("evaluate_score", &ContextualState::evaluate_score)
+        .def("advance", &ContextualState::advance)
+        .def("cloneAdvanced", &ContextualState::cloneAdvanced)
+        .def("clone", &ContextualState::clone)
+        .def("_legal_actions", &ContextualState::_legal_actions);
 
     m.def("randomAction", &randomAction, R"mydelimiter(
         get futuer actions by random

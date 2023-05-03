@@ -51,7 +51,7 @@ def _get_functions(obj):
     return {k for k, v in obj.__dict__.items() if type(v).__name__ == "function"}
 
 
-class BaseState(_thun.State):
+class BaseContextualState(_thun.ContextualState):
     """Abstract Class for Beam Search
 
     If this class is inherited
@@ -241,19 +241,19 @@ class BaseState(_thun.State):
         # sub_cls is Class that inherit BaseClass
         cloned = self.sub_cls.__new__(self.sub_cls)
         # clone C++ state
-        _thun.State.__init__(cloned, self)
+        _thun.ContextualState.__init__(cloned, self)
         # clone Python state
         cloned.__dict__ = {key: deepcopy(value)
                            for key, value in self.__dict__.items()}
         return cloned
 
 
-def beam_search_action(state: BaseState, beam_width: int) -> List[int]:
+def beam_search_action(state: BaseContextualState, beam_width: int) -> List[int]:
     """Decide actions by beam search.
 
     Parameters
     ----------
-    Subclass inheriting from BaseState
+    Subclass inheriting from BaseContextualState
         state
     int
         beam_width
@@ -266,12 +266,12 @@ def beam_search_action(state: BaseState, beam_width: int) -> List[int]:
     return _thun.beamSearchAction(state, beam_width)
 
 
-def show_task(state: BaseState, actions: List[int]) -> None:
+def show_task(state: BaseContextualState, actions: List[int]) -> None:
     """Display the process of performing the specified actions
 
     Parameters
     ----------
-    Subclass inheriting from BaseState
+    Subclass inheriting from BaseContextualState
         state
     List[int]
         actions
@@ -291,12 +291,12 @@ def show_task(state: BaseState, actions: List[int]) -> None:
     print(line)
 
 
-def play_task(state: BaseState, ai: Callable, *args, **kwargs) -> None:
+def play_task(state: BaseContextualState, ai: Callable, *args, **kwargs) -> None:
     """Display the process of doing a task with a specified AI
 
     Parameters
     ----------
-    Subclass inheriting from BaseState
+    Subclass inheriting from BaseContextualState
         state
     Callable
         ai (Beam search, etc.)
