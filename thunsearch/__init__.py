@@ -82,13 +82,13 @@ class BaseState(_thun.State):
         cls.sub_cls = cls
 
     @classmethod
-    def get_not_implemented_should_methods(cls):
+    def get_not_implemented_should_methods(cls) -> Set[str]:
         base_functions = _get_labeled_functions(__class__, "__should__")
         sub_functions = _get_functions(cls)
         return base_functions-sub_functions
 
     @classmethod
-    def get_not_implemented_can_methods(cls):
+    def get_not_implemented_can_methods(cls) -> Set[str]:
         base_functions = _get_labeled_functions(__class__, "__can__")
         sub_functions = _get_functions(cls)
         return base_functions-sub_functions
@@ -128,14 +128,15 @@ class BaseState(_thun.State):
 
         Returns
         -------
-        actions:List[int]
+        List[int]
+            actions
         """
         raise NotImplementedError(
             f"{sys._getframe().f_code.co_name} is not implemented")
 
     @must
     def is_done(self) -> bool:
-        """Check game is done
+        """Check task is done
 
         Label
         ----------
@@ -148,7 +149,8 @@ class BaseState(_thun.State):
 
         Returns
         -------
-        actions:List[int]
+        bool
+            Whether the task ended successfully
         """
         raise NotImplementedError(
             f"{sys._getframe().f_code.co_name} is not implemented")
@@ -168,14 +170,15 @@ class BaseState(_thun.State):
 
         Returns
         -------
-        evaluated_score:float
+        float
+            evaluated_score
         """
         raise NotImplementedError(
             f"{sys._getframe().f_code.co_name} is not implemented")
 
     @can
     def is_dead(self) -> bool:
-        """Check to see if the game ended badly
+        """Check to see if the task ended badly
 
         If not overridden by a subclass, always returns False.
 
@@ -190,12 +193,27 @@ class BaseState(_thun.State):
 
         Returns
         -------
-        evaluated_score:float
+        bool
+            Whether the task ended up being an anomaly
         """
         return False
 
     @can
-    def __str__(self):
+    def __str__(self) -> str:
+        """Convert to string
+
+        If not overridden by a subclass,
+        just connect all member variables as str.
+
+        Label
+        ----------
+        "can": Can be overided.
+
+        Returns
+        -------
+        str
+            state information
+        """
         ret_s = ""
         for key, value in self.__dict__.items():
             ret_s += f"{key}:"
@@ -208,7 +226,12 @@ class BaseState(_thun.State):
     def clone(self):
         """Clone object that inherit BaseClass
 
+        If not overridden by a subclass,
         clone instance as deepcopy
+
+        Label
+        ----------
+        "can": Can be overided.
 
         Returns
         -------
@@ -225,11 +248,38 @@ class BaseState(_thun.State):
         return cloned
 
 
-def beam_search_action(state: BaseState, beam_width: int):
+def beam_search_action(state: BaseState, beam_width: int) -> List[int]:
+    """Decide actions by beam search.
+
+    Parameters
+    ----------
+    Subclass inheriting from BaseState
+        state
+    int
+        beam_width
+
+    Returns
+    -------
+    List[int]
+        List of actions to be taken until the task is completed
+    """
     return _thun.beamSearchAction(state, beam_width)
 
 
-def show_game(state: BaseState, actions: List[int]):
+def show_task(state: BaseState, actions: List[int]) -> None:
+    """Display the process of performing the specified actions
+
+    Parameters
+    ----------
+    Subclass inheriting from BaseState
+        state
+    List[int]
+        actions
+
+    Returns
+    -------
+    None
+    """
     state = state.clone()
     line = "#"*30
     print(line)
@@ -241,5 +291,18 @@ def show_game(state: BaseState, actions: List[int]):
     print(line)
 
 
-def play_game(state: BaseState, ai: Callable):
-    show_game(state, ai(state))
+def play_task(state: BaseState, ai: Callable) -> None:
+    """Display the process of doing a task with a specified AI
+
+    Parameters
+    ----------
+    Subclass inheriting from BaseState
+        state
+    Callable
+        ai (Beam search, etc.)
+
+    Returns
+    -------
+    None
+    """
+    show_task(state, ai(state))

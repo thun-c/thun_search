@@ -38,7 +38,7 @@ class MazeState(thun.BaseState):
                         for h in range(MazeState.H)]
         self.character_ = Coord(0, 0)
         self.trap_ = Coord(0, 0)
-        self.game_score_ = 0
+        self.task_score_ = 0
         if seed is not None:
             random.seed(seed)
             self.character_.y_ = random.randrange(MazeState.H)
@@ -63,13 +63,13 @@ class MazeState(thun.BaseState):
         return self.trap_ == self.character_
 
     def evaluate_score(self) -> float:
-        return self.game_score_
+        return self.task_score_
 
     def advance(self, action):
         self.character_.y_ += MazeState.dy[action]
         self.character_.x_ += MazeState.dx[action]
         if self.points_[self.character_.y_][self.character_.x_] > 0:
-            self.game_score_ += self.points_[
+            self.task_score_ += self.points_[
                 self.character_.y_][self.character_.x_]
             self.points_[self.character_.y_][self.character_.x_] = 0
         self.turn_ += 1
@@ -87,7 +87,7 @@ class MazeState(thun.BaseState):
     def __str__(self):
         ss = ""
         ss += f"turn:\t{self.turn_}\n"
-        ss += f"game_score_:\t{self.game_score_}\n"
+        ss += f"task_score_:\t{self.task_score_}\n"
         for h in range(MazeState.H):
             for w in range(MazeState.W):
                 if (self.character_ == Coord(h, w)):
@@ -102,15 +102,15 @@ class MazeState(thun.BaseState):
         return ss
 
 
-def test_ai_performance(name_ai, game_number, per_game_number):
+def test_ai_performance(name_ai, task_number, per_task_number):
     name, ai = name_ai
     diff_sum = 0
     score_sum = 0
-    for i in range(game_number):
+    for i in range(task_number):
         state = MazeState(i)
         start_time = time.time()
         actions = None
-        for j in range(per_game_number):
+        for j in range(per_task_number):
             tmp_actions = ai(state)
             if j == 0:
                 actions = tmp_actions
@@ -119,9 +119,9 @@ def test_ai_performance(name_ai, game_number, per_game_number):
         for action in actions:
             state.advance(action)
             state.evaluate_score()
-        score_sum += state.game_score_
-    time_mean = diff_sum*1000//game_number
-    score_mean = round(score_sum/game_number, 2)
+        score_sum += state.task_score_
+    time_mean = diff_sum*1000//task_number
+    score_mean = round(score_sum/task_number, 2)
     print(f"\"{name}\" score:{score_mean}\ttime:{time_mean}")
 
 
@@ -135,17 +135,17 @@ if __name__ == "__main__":
     print("not_implemented_can", MazeState.get_not_implemented_can_methods())
 
     state = MazeState(1)
-    # thun.play_game(state, beam_py_function(2))
-    # print("state\n###########\n", state)
+    # thun.play_task(state, beam_py_function(2))
+    # print(f"state\n###########\n{state}")
     # import sys
     # sys.exit()
     # state2 = state.cloneAdvanced(1)
     # print("state2\n###########\n", state2)
     # print("state\n###########\n", state)
 
-    game_number = 10
-    per_game_number = 10
-    numbers = game_number, per_game_number
+    task_number = 10
+    per_task_number = 10
+    numbers = task_number, per_task_number
 
     def get_name_beam(beamwidth):
         return (
