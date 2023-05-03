@@ -82,6 +82,12 @@ class BaseContextualState(_thun.ContextualState):
         cls.sub_cls = cls
 
     @classmethod
+    def get_not_implemented_must_methods(cls) -> Set[str]:
+        base_functions = _get_labeled_functions(__class__, "__must__")
+        sub_functions = _get_functions(cls)
+        return base_functions-sub_functions
+
+    @classmethod
     def get_not_implemented_should_methods(cls) -> Set[str]:
         base_functions = _get_labeled_functions(__class__, "__should__")
         sub_functions = _get_functions(cls)

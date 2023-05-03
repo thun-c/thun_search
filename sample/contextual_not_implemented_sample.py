@@ -71,15 +71,6 @@ class MazeState(thun.BaseContextualState):
         self.turn_ += 1
         return
 
-    def legal_actions(self):
-        actions = []
-        for action in range(4):
-            ty = self.character_.y_+MazeState.dy[action]
-            tx = self.character_.x_+MazeState.dx[action]
-            if ty >= 0 and ty < MazeState.H and tx >= 0 and tx < MazeState.W:
-                actions.append(action)
-        return actions
-
     def __str__(self):
         ss = ""
         ss += f"turn:\t{self.turn_}\n"
@@ -134,28 +125,5 @@ if __name__ == "__main__":
     print("not_implemented_can",
           MazeState.get_not_implemented_can_methods())
 
-    state = MazeState(1)
-    # thun.play_task(state, thun.beam_search_action, 2)
-    # print(f"state\n###########\n{state}")
-    # import sys
-    # sys.exit()
-    # state2 = state.cloneAdvanced(1)
-    # print("state2\n###########\n", state2)
-    # print("state\n###########\n", state)
-
-    task_number = 10
-    per_task_number = 10
-    numbers = task_number, per_task_number
-
-    def get_name_beam(beamwidth):
-        return (
-            f"beam {beamwidth}",
-            beam_py_function(beam_width=beamwidth)
-        )
-
-    test_ai_performance(get_name_beam(1), *numbers)
-    test_ai_performance(get_name_beam(2), *numbers)
-    test_ai_performance(get_name_beam(4), *numbers)
-    test_ai_performance(get_name_beam(8), *numbers)
-    test_ai_performance(get_name_beam(16), *numbers)
-    test_ai_performance(get_name_beam(32), *numbers)
+    state = MazeState(0)
+    thun.play_task(state, thun.beam_search_action, 2)
