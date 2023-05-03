@@ -1,10 +1,7 @@
 import random
 import time
 from typing import Callable
-# import thunsearch._thunsearch as thun
 import thunsearch as thun
-print("thun", [key for key in thun.__dict__.keys()])
-print("thun._thunsearch", [key for key in thun._thunsearch.__dict__.keys()])
 
 
 class Coord:
@@ -31,8 +28,7 @@ class MazeState(thun.BaseState):
     INF = 1000000000
 
     def __init__(self, seed=None) -> None:
-        thun.State.__init__(self)
-        # super().__init__()
+        super().__init__()
         self.turn_ = 0
         self.points_ = [[0 for w in range(MazeState.W)]
                         for h in range(MazeState.H)]
@@ -135,7 +131,7 @@ if __name__ == "__main__":
     print("not_implemented_can", MazeState.get_not_implemented_can_methods())
 
     state = MazeState(1)
-    # thun.play_task(state, beam_py_function(2))
+    # thun.play_task(state, thun.beam_search_action, 2)
     # print(f"state\n###########\n{state}")
     # import sys
     # sys.exit()

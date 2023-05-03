@@ -291,7 +291,7 @@ def show_task(state: BaseState, actions: List[int]) -> None:
     print(line)
 
 
-def play_task(state: BaseState, ai: Callable) -> None:
+def play_task(state: BaseState, ai: Callable, *args, **kwargs) -> None:
     """Display the process of doing a task with a specified AI
 
     Parameters
@@ -300,9 +300,12 @@ def play_task(state: BaseState, ai: Callable) -> None:
         state
     Callable
         ai (Beam search, etc.)
+    Args
+        *args,**kargs
+        args for ai
 
     Returns
     -------
     None
     """
-    show_task(state, ai(state))
+    show_task(state, ai(state, *args, **kwargs))
