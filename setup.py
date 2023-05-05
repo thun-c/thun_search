@@ -135,7 +135,7 @@ setup(
     version="0.0.1",
     author="Thunder",
     author_email="aoki.eita1130@gmail.com",
-    description="A test project using pybind11 and CMake",
+    description="Search algorithm library implemented in c++",
     long_description="",
     ext_modules=[CMakeExtension("thunsearch._thunsearch")],
     packages=find_packages(),
