@@ -1,1 +1,0 @@
-rm -f build/test;g++ -o build/test src/test.cpp -std=c++17 -pthread -O3;./build/test
