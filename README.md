@@ -42,6 +42,43 @@ If a method labeled "must" is not properly implemented, raises a NotImplementedE
 NotImplementedError: must functions are not implemented. [legal_actions] 
 ```
 
+## Speed Comparison (Python only vs With cpp)
+
+I compared the speed of beam search between a program implemented using only python and a program implemented using c++ as well.
+
+The results of a program implemented only in python are shown below.
+
+```bash
+python test_speed/test_speed_python_only.py
+```
+
+```bash
+"beam 2" score:22.9     time:14.0
+"beam 4" score:23.3     time:24.0
+"beam 8" score:23.5     time:40.0
+"beam 16" score:23.5    time:62.0
+"beam 32" score:23.5    time:86.0
+```
+
+The results of the program, implemented in a combination of python and C++, are as follows.
+
+
+```bash
+python test_speed/test_speed_with_cpp.py 
+```
+
+```bash
+"beam 2" score:22.9     time:7.0
+"beam 4" score:23.3     time:14.0
+"beam 8" score:23.5     time:21.0
+"beam 16" score:23.5    time:30.0
+"beam 32" score:23.5    time:40.0
+```
+
+It was shown to be approximately twice as fast when implemented using C++ as well, compared to implementation using python alone.
+
+
+
 
 ## Implemented Algorithms
 
@@ -49,7 +86,7 @@ NotImplementedError: must functions are not implemented. [legal_actions]
 
 - Beam Search
 
-## TBD
+## Algorithms to be implemented in the future (TBD)
 
 ### Algorithms for Contextual Problems
 

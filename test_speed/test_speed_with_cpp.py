@@ -126,23 +126,6 @@ def beam_py_function(beam_width) -> Callable:
 
 
 if __name__ == "__main__":
-    print("thun.__version__", thun.__version__)
-    print("not_implemented_must",
-          MazeState.get_not_implemented_must_methods())
-    print("not_implemented_should",
-          MazeState.get_not_implemented_should_methods())
-    print("not_implemented_can",
-          MazeState.get_not_implemented_can_methods())
-
-    state = MazeState(1)
-    # thun.play_task(state, thun.beam_search_action, 2)
-    # print(f"state\n###########\n{state}")
-    # import sys
-    # sys.exit()
-    # state2 = state.cloneAdvanced(1)
-    # print("state2\n###########\n", state2)
-    # print("state\n###########\n", state)
-
     task_number = 10
     per_task_number = 10
     numbers = task_number, per_task_number
@@ -153,7 +136,6 @@ if __name__ == "__main__":
             beam_py_function(beam_width=beamwidth)
         )
 
-    test_ai_performance(get_name_beam(1), *numbers)
     test_ai_performance(get_name_beam(2), *numbers)
     test_ai_performance(get_name_beam(4), *numbers)
     test_ai_performance(get_name_beam(8), *numbers)

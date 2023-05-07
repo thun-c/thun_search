@@ -22,34 +22,28 @@ class BaseContextualState():
         self.last_action_ = -1
         pass
 
-    @abstractmethod
     def advance(self, action):
         raise NotImplementedError(
             f"{sys._getframe().f_code.co_name} is not implemented")
 
-    @abstractmethod
     def legal_actions(self) -> List[int]:
         raise NotImplementedError(
             f"{sys._getframe().f_code.co_name} is not implemented")
 
-    @abstractmethod
     def is_done(self):
         raise NotImplementedError(
             f"{sys._getframe().f_code.co_name} is not implemented")
 
-    @abstractmethod
     def is_dead(self):
         raise NotImplementedError(
             f"{sys._getframe().f_code.co_name} is not implemented")
 
-    @abstractmethod
     def clone(self):
         raise NotImplementedError(
             f"{sys._getframe().f_code.co_name} is not implemented.\n"
             f"It is recommended to write "
             f"\"return clone_inherited_instance(__class__, self)\"")
 
-    @abstractmethod
     def __str__(self):
         raise NotImplementedError(
             f"{sys._getframe().f_code.co_name} is not implemented")
@@ -64,7 +58,6 @@ class BaseContextualState():
         cloned.last_action_ = action
         return cloned
 
-    @abstractmethod
     def evaluate_score(self):
         raise NotImplementedError(
             f"{sys._getframe().f_code.co_name} is not implemented")
@@ -118,22 +111,6 @@ def beamSearchAction(state: BaseContextualState, beam_width):
 
 def beam_py_function(beam_width):
     return lambda state: beamSearchAction(state, beam_width)
-
-
-def show_game(state: BaseContextualState, actions: List[int]):
-    state = state.clone()
-    line = "#"*30
-    print(line)
-    print(state)
-    for action in actions:
-        state.advance(action)
-        print(line)
-        print(state)
-    print(line)
-
-
-def play_game(state: BaseContextualState, ai: Callable):
-    show_game(state, ai(state))
 
 
 class Coord:
@@ -258,24 +235,16 @@ def test_ai_performance(name_ai, game_number, per_game_number):
 
 
 if __name__ == "__main__":
-    state = MazeState(0)
-
     game_number = 10
     per_game_number = 10
     numbers = game_number, per_game_number
 
-    # states: List[MazeState] = [MazeState(i) for i in range(10)]
-    # pq: List[MazeState] = []
-    # for state in states:
-    #     state.evaluated_score_ = random.randrange(4)
-    #     heapq.heappush(pq, state)
-
-    # while len(pq) > 0:
-    #     print(pq[0].evaluated_score_)
-    #     heapq.heappop(pq)
-
     def get_name_beam(beamwidth):
-        return (f"beam {beamwidth}", beam_py_function(beam_width=beamwidth))
+        return (
+            f"beam {beamwidth}",
+            beam_py_function(beam_width=beamwidth)
+        )
+
     test_ai_performance(get_name_beam(2), *numbers)
     test_ai_performance(get_name_beam(4), *numbers)
     test_ai_performance(get_name_beam(8), *numbers)
